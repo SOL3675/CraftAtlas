@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1, "id": "fixture-equipment-start",
+  "inventory": { "atlas_fixture:floor": 4, "atlas_fixture:chalk": 1, "atlas_fixture:dust": 2, "atlas_fixture:focus": 1, "atlas_fixture:filled_flask": 1 },
+  "equipment": [], "stages": ["atlas_fixture:research"], "dimensions": ["minecraft:overworld"],
+  "forbiddenProcesses": [], "allowedTypes": null, "supply": "renewable", "closed": false, "closedResources": [],
+  "gameRules": { "fixture": "Qualitative renewable supply assumption; finite inventories and durability are not verified" }
+}

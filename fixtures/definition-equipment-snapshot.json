@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1, "id": "definition-equipment-fixture", "session": "offline-contract", "generation": 0,
+  "mode": "dedicated", "minecraft": "1.21.1", "loader": "neoforge", "loaderVersion": "21.1.252", "collectorVersion": "0.1.0",
+  "mods": [{ "id": "minecraft", "version": "1.21.1" }, { "id": "atlas_fixture", "version": "1" }],
+  "environment": { "fixture": "synthetic offline contract, not collected from a game" },
+  "resources": [
+    { "id": "atlas_fixture:floor", "kind": "item", "name": "Fixture floor", "evidence": [] },
+    { "id": "atlas_fixture:chalk", "kind": "item", "name": "Fixture chalk", "evidence": [] },
+    { "id": "atlas_fixture:installed_circle", "kind": "capability", "name": "Installed fixture circle", "evidence": [] },
+    { "id": "atlas_fixture:dust", "kind": "item", "name": "Fixture dust", "evidence": [] },
+    { "id": "atlas_fixture:focus", "kind": "item", "name": "Fixture catalyst", "evidence": [] },
+    { "id": "atlas_fixture:filled_flask", "kind": "item", "name": "Fixture filled flask", "evidence": [] },
+    { "id": "atlas_fixture:empty_flask", "kind": "item", "name": "Fixture empty flask", "evidence": [] },
+    { "id": "atlas_fixture:crystal", "kind": "item", "name": "Fixture crystal", "evidence": [] }
+  ],
+  "tags": {}, "recipes": [],
+  "coverage": [{ "dataset": "recipes", "type": "*", "status": "complete", "enumerated": 0, "interpreted": null, "reasons": ["Synthetic fixture defines routes with the accompanying definition pack"] }],
+  "completion": { "status": "complete", "errors": [] }
+}

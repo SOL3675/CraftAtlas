@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Craft Atlas</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><a class="brand" href="/">◇ <span>Craft Atlas</span></a><span class="pill">LOCAL · 読み取り専用</span><div id="identity">スナップショットを読み込み中</div></header>
+<main>
+<aside class="sidebar"><div class="eyebrow">取得経路をたどる</div><h1>次の材料は、<br>どこから？</h1><p class="muted">実行時の事実・補足定義・未解析を、同じ地図で確認できます。</p>
+<form id="search-form"><label for="search">アイテム名 / ID</label><div class="search-row"><input id="search" placeholder="iron · minecraft:iron_ingot" autocomplete="off"><button aria-label="検索">↗</button></div><label for="mod">表示する Mod</label><input id="mod" placeholder="例: mekanism"><small>表示フィルター。到達分析には影響しません。</small></form>
+<div class="list-header"><span id="count">資源</span><div><button id="previous" class="quiet" aria-label="前のページ">←</button><button id="next" class="quiet" aria-label="次のページ">→</button></div></div><div id="results"></div>
+</aside>
+<section class="workspace"><nav aria-label="表示切り替え"><button class="tab active" data-view="graph">取得経路</button><button class="tab" data-view="diagnostics">診断</button><button class="tab" data-view="diff">変更差分</button><button class="tab" data-view="coverage">取得範囲</button></nav>
+<div id="status" role="status" aria-live="polite"></div>
+<section id="graph-view"><div class="workspace-heading"><div><div class="eyebrow">LOCAL GRAPH</div><h2 id="selected">資源を選択してください</h2></div><div class="controls"><select id="direction" aria-label="経路の方向"><option value="sources">入手経路</option><option value="uses">用途</option></select><label>深さ <select id="depth"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label><button id="explain">到達分析</button></div></div><p class="legend"><span class="resource-dot"></span>資源 <span class="process-dot"></span>処理 · スロット間は AND / 候補内は OR · 設備は非消費</p><div id="graph" class="graph"><div class="empty">左の検索からアイテムを選ぶと、必要な範囲だけ経路を展開します。</div></div><div id="analysis"></div><details class="scenario"><summary>分析シナリオと経路禁止条件</summary><p>この設定は起動時の <code>--scenario</code> から読み込みます。表示フィルターとは独立しています。</p><pre id="scenario"></pre></details></section>
+<section id="diagnostics-view" hidden><div class="eyebrow">SAME SNAPSHOT, SAME DIAGNOSIS</div><h2>診断</h2><p class="muted">確定した違反と、未解析による判定不能を区別します。</p><div id="diagnostics"></div></section>
+<section id="diff-view" hidden><div class="eyebrow">SEMANTIC CHANGES</div><h2>変更差分</h2><p class="muted">数量・条件・タグ展開の変化と影響範囲。</p><div id="diff"></div></section>
+<section id="coverage-view" hidden><div class="eyebrow">KNOWN / UNKNOWN</div><h2>取得範囲</h2><p class="muted">解釈件数の分母は列挙できた件数です。ゲーム全体の網羅率ではありません。</p><div id="coverage"></div></section>
+</section>
+<aside class="detail-panel"><div class="eyebrow">EVIDENCE & DETAILS</div><h2>根拠と詳細</h2><p class="muted">グラフのノードを選択すると、数量・設備・出典・未知条件を確認できます。</p><div id="details"></div></aside>
+</main><footer>CRAFT ATLAS <span>定性的な到達可能性は、有限在庫で実行できる手順の証明ではありません。</span></footer><script type="module" src="/app.js"></script>
+</body></html>

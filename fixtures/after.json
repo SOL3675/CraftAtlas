@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-after",
+  "session": "test-session",
+  "generation": 1,
+  "mode": "dedicated",
+  "minecraft": "1.21.1",
+  "loader": "neoforge",
+  "loaderVersion": "21.1.252",
+  "collectorVersion": "0.1.0",
+  "mods": [
+    {
+      "id": "minecraft",
+      "version": "1.21.1"
+    },
+    {
+      "id": "mekanism",
+      "version": "10.7.14"
+    }
+  ],
+  "environment": {
+    "datapacks": [
+      "vanilla",
+      "fixture"
+    ]
+  },
+  "resources": [
+    {
+      "id": "minecraft:dirt",
+      "kind": "item",
+      "name": "dirt",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:cobblestone",
+      "kind": "item",
+      "name": "cobblestone",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:stick",
+      "kind": "item",
+      "name": "stick",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:diamond",
+      "kind": "item",
+      "name": "diamond",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:iron_ingot",
+      "kind": "item",
+      "name": "iron_ingot",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:gold_ingot",
+      "kind": "item",
+      "name": "gold_ingot",
+      "evidence": []
+    },
+    {
+      "id": "mekanism:enrichment_chamber",
+      "kind": "item",
+      "name": "Enrichment chamber",
+      "evidence": []
+    }
+  ],
+  "tags": {
+    "atlas:materials": [
+      "minecraft:dirt"
+    ],
+    "atlas:empty": []
+  },
+  "recipes": [
+    {
+      "id": "atlas:diamond",
+      "type": "minecraft:crafting_shapeless",
+      "data": {
+        "type": "minecraft:crafting_shapeless",
+        "ingredients": [
+          {
+            "tag": "atlas:materials"
+          },
+          {
+            "item": "minecraft:stick"
+          }
+        ],
+        "result": {
+          "id": "minecraft:diamond",
+          "count": 4
+        }
+      }
+    },
+    {
+      "id": "mekanism:enriching/fixture",
+      "type": "mekanism:enriching",
+      "data": {
+        "input": {
+          "item": "minecraft:iron_ingot",
+          "count": 2
+        },
+        "output": {
+          "id": "minecraft:gold_ingot",
+          "count": 3
+        }
+      }
+    },
+    {
+      "id": "atlas:dynamic",
+      "type": "minecraft:crafting_special_repairitem",
+      "data": {
+        "type": "minecraft:crafting_special_repairitem"
+      }
+    }
+  ],
+  "coverage": [
+    {
+      "dataset": "recipes",
+      "type": "*",
+      "status": "complete",
+      "enumerated": 3,
+      "interpreted": null,
+      "reasons": []
+    },
+    {
+      "dataset": "loot",
+      "type": "*",
+      "status": "unsupported",
+      "enumerated": null,
+      "interpreted": null,
+      "reasons": [
+        "Phase 5"
+      ]
+    }
+  ],
+  "completion": {
+    "status": "complete",
+    "errors": []
+  }
+}

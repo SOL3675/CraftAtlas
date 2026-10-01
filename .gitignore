@@ -5,3 +5,11 @@
 .agents/skills/troubleshooting
 .harness/
 node_modules/
+build/
+dist/
+.gradle/
+harness.local.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+mods/collector/run/

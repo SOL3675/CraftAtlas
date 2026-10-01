@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "atlas-fixture-equipment",
+  "version": "1.0.0",
+  "priority": 10,
+  "targets": { "minecraft": "1.21.1", "loader": "neoforge", "mods": [{ "id": "atlas_fixture", "versions": ["1"] }] },
+  "verified": ["Offline analyzer contract fixture only; fictional equipment, no real Mod behavior claimed"],
+  "operations": [],
+  "additions": [
+    {
+      "id": "atlas_fixture:assemble_circle", "sourceId": "atlas_fixture:assemble_circle", "type": "atlas_fixture:assembly",
+      "inputs": [
+        { "alternatives": [{ "resource": "atlas_fixture:floor" }], "amount": 4, "unit": "item", "consumption": "consumed", "evidence": [] },
+        { "alternatives": [{ "resource": "atlas_fixture:chalk" }], "amount": 1, "unit": "durability", "consumption": "durability", "evidence": [] }
+      ],
+      "outputs": [{ "resource": "atlas_fixture:installed_circle", "amount": 1, "unit": "capability", "role": "primary", "probability": 1, "evidence": [] }],
+      "requirements": [], "evidence": [], "interpretation": "supported", "execution": "executable", "unknown": [], "enabled": true,
+      "costs": [{ "kind": "time", "amount": null, "unit": "tick", "basis": "fixture does not measure assembly time" }],
+      "raw": { "fixture": "assembly requires floor arrangement and chalk operation; capability persists" }, "fieldEvidence": {}, "conflicts": []
+    },
+    {
+      "id": "atlas_fixture:repeat_ritual", "sourceId": "atlas_fixture:repeat_ritual", "type": "atlas_fixture:ritual",
+      "inputs": [
+        { "alternatives": [{ "resource": "atlas_fixture:dust" }], "amount": 2, "unit": "item", "consumption": "consumed", "evidence": [] },
+        { "alternatives": [{ "resource": "atlas_fixture:focus" }], "amount": 1, "unit": "item", "consumption": "catalyst", "evidence": [] },
+        { "alternatives": [{ "resource": "atlas_fixture:filled_flask" }], "amount": 1, "unit": "item", "consumption": "consumed", "evidence": [] }
+      ],
+      "outputs": [
+        { "resource": "atlas_fixture:crystal", "amount": 1, "unit": "item", "role": "primary", "probability": 1, "evidence": [] },
+        { "resource": "atlas_fixture:empty_flask", "amount": 1, "unit": "item", "role": "returned", "probability": 1, "evidence": [] }
+      ],
+      "requirements": [{ "kind": "equipment", "id": "atlas_fixture:installed_circle", "evidence": [] }, { "kind": "stage", "id": "atlas_fixture:research", "evidence": [] }],
+      "evidence": [], "interpretation": "supported", "execution": "executable", "unknown": [], "enabled": true, "costs": [],
+      "raw": { "fixture": "reuses the installed equipment; assembly floor and chalk are not recurring material costs" }, "fieldEvidence": {}, "conflicts": []
+    }
+  ]
+}
