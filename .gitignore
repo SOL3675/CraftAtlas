@@ -1,0 +1,7 @@
+# mc-dev-harness
+.agents/skills/development-loop
+.agents/skills/porting
+.agents/skills/project-setup
+.agents/skills/troubleshooting
+.harness/
+node_modules/

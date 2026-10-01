@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "mc-dev-harness": "file:mc-dev-harness-0.1.0.tgz"
+  }
+}
