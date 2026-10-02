@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, renameSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fixture } from './helpers.ts';
-import { normalize } from '../packages/core/src/normalize.ts';
+import { normalize, semanticHash } from '../packages/core/src/normalize.ts';
 import { diff } from '../packages/core/src/diff.ts';
 import { readSnapshot, writeSnapshot } from '../packages/core/src/snapshot.ts';
 import { buildDatabase, openDatabase } from '../packages/core/src/db.ts';
@@ -48,6 +48,34 @@ test('SQLite rebuild reproduces indexed queries, including tag OR and pagination
       assert.equal(a.coverage().items.find(c => c.dataset === 'loot')!.enumerated, null);
       assert.deepEqual(a.model(), m);
     } finally { a.close(); b.close(); }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+test('SQLite uses indexes resource gates and excludes colliding context or opaque condition IDs', () => {
+  const root = mkdtempSync(join(tmpdir(), 'atlas-db-gates-'));
+  try {
+    const m = normalize(fixture()), template = m.processes.find(p => p.id === 'atlas:diamond')!;
+    for (const kind of ['equipment', 'stage', 'dimension'] as const) {
+      const id = `atlas:gate-${kind}`;
+      m.resources.push({ id, kind, name: id, evidence: template.evidence });
+      for (const requirementKind of [kind, 'context', 'opaque'] as const) {
+        const p = structuredClone(template); p.id = p.sourceId = `atlas:${kind}-${requirementKind}`; p.inputs = [];
+        p.requirements = [{ kind: requirementKind, id, evidence: template.evidence, ...(requirementKind === 'context' ? { predicate: true } : {}) }]; m.processes.push(p);
+      }
+    }
+    // A real ingredient use still counts when the same process also has a context ID collision.
+    const ingredient = structuredClone(template); ingredient.id = ingredient.sourceId = 'atlas:ingredient-and-context';
+    ingredient.inputs = [{ alternatives: [{ resource: 'atlas:gate-equipment' }], amount: 1, unit: 'item', consumption: 'consumed', evidence: template.evidence }];
+    ingredient.requirements = [{ kind: 'context', id: 'atlas:gate-equipment', predicate: true, evidence: template.evidence }]; m.processes.push(ingredient);
+    m.contentHash = semanticHash(m);
+    const file = join(root, 'gates.sqlite'); buildDatabase(file, m); const db = openDatabase(file);
+    try {
+      for (const kind of ['equipment', 'stage', 'dimension'] as const) {
+        const expected = [`atlas:${kind}-${kind}`, ...(kind === 'equipment' ? ['atlas:ingredient-and-context'] : [])].sort();
+        const result = db.uses(`atlas:gate-${kind}`);
+        assert.deepEqual(result.items.map(p => p.id), expected); assert.equal(result.total, expected.length);
+        assert.deepEqual(db.inspect(`atlas:gate-${kind}`).uses.map(p => p.id), expected);
+      }
+    } finally { db.close(); }
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 test('reject duplicate identities, failed snapshot and stale JEI tokens', () => {

@@ -1,13 +1,16 @@
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import { readFileSync } from 'node:fs';
-import type { Model, Scenario, Expectations, Process } from '../../core/src/types.ts';
+import type { Model, Scenario, Expectations, Process, CostRequest } from '../../core/src/types.ts';
+import { calculateCost } from '../../core/src/cost.ts';
+import type { CostAnalysis } from '../../core/src/cost.ts';
+import { validate } from '../../core/src/validate.ts';
 import { analyze } from '../../core/src/analyze.ts';
 import { audit } from '../../core/src/audit.ts';
 import { diff } from '../../core/src/diff.ts';
 import { localGraph as coreGraph } from '../../core/src/graph.ts';
 
-export interface WebOptions { model: Model; scenario?: Scenario; expectations?: Expectations; before?: Model }
+export interface WebOptions { model: Model; scenario?: Scenario; expectations?: Expectations; before?: Model; costRequest?: CostRequest }
 export function bounds(value: string | undefined | null, fallback: number, maximum: number, name: string): number {
   if (value === undefined || value === null) return fallback;
   if (!/^\d+$/.test(value) || Number(value) > maximum) throw new Error(`${name} must be an integer between 0 and ${maximum}`);
@@ -28,19 +31,22 @@ export function envelope(query: unknown, result: unknown, model: Model, limitati
   return { schemaVersion: 1, query, result, evidence: evidence.slice(0, 100), limitations: [...limitations, ...(evidence.length > 100 ? ['Evidence truncated at 100 records'] : [])] };
 }
 function page<T>(items: T[], limit: number, offset: number) { return { items: items.slice(offset, offset + limit), total: items.length, limit, offset, truncated: offset > 0 || offset + limit < items.length }; }
+export function boundedCost(analysis: CostAnalysis, limit: number, offset: number) {
+  return { ...analysis, steps: page(analysis.steps, limit, offset), materials: { setup: page(analysis.materials.setup, limit, offset), recurring: page(analysis.materials.recurring, limit, offset) }, catalysts: page(analysis.catalysts, limit, offset), durability: page(analysis.durability, limit, offset), outputs: page(analysis.outputs, limit, offset), diagnostics: page(analysis.diagnostics, limit, offset), costs: { setup: page(analysis.costs.setup, limit, offset), recurring: page(analysis.costs.recurring, limit, offset), total: page(analysis.costs.total, limit, offset) } };
+}
 function related(model: Model, id: string, direction: string): Process[] {
   return model.processes.filter(p => direction === 'uses'
-    ? p.inputs.some(s => s.alternatives.some(a => a.resource === id || a.members?.includes(id))) || p.requirements.some(r => r.kind === 'equipment' && r.id === id)
+    ? p.inputs.some(s => s.alternatives.some(a => a.resource === id || a.members?.includes(id))) || p.requirements.some(r => ['equipment', 'stage', 'dimension'].includes(r.kind) && r.id === id)
     : p.outputs.some(o => o.resource === id));
 }
 export function localGraph(model: Model, id: string, depth: number, limit: number, direction = 'sources', rootKind?: 'resource' | 'process') {
   const graph = coreGraph(model, id, { depth, limit: Math.max(1, limit), direction: direction as 'sources' | 'uses', rootKind });
   const nodes = graph.nodes.map(node => {
     const original = node.kind === 'process' ? model.processes.find(p => p.id === node.target) : node.kind === 'resource' ? model.resources.find(r => r.id === node.target) : undefined;
-    return { ...node, data: { ...original, id: node.target, unknown: node.unknown, evidence: node.evidence, ...(node.kind === 'process' ? { raw: undefined } : {}) } };
+    return { ...node, data: { ...original, id: node.target, unknown: node.unknown, evidence: node.evidence, ...(node.condition ? { condition: node.condition } : {}), ...(node.kind === 'process' ? { raw: undefined } : {}) } };
   });
   const edges = graph.edges.map(edge => ({ ...edge, from: edge.source, to: edge.target,
-    label: edge.role === 'equipment' ? '設備 (非消費)' : edge.role === 'output' ? `×${edge.amount} ${edge.unit} · p=${edge.probability ?? '?'}` : `AND slot ${(edge.slot ?? 0) + 1} / OR ${(edge.alternative ?? 0) + 1} ×${edge.amount} ${edge.unit}${edge.tag ? ` #${edge.tag}` : ''}${edge.consumption ? ` (${edge.consumption})` : ''}` }));
+    label: edge.role === 'output' ? `×${edge.amount} ${edge.unit} · p=${edge.probability ?? '?'}` : edge.role === 'input' ? `AND slot ${(edge.slot ?? 0) + 1} / OR ${(edge.alternative ?? 0) + 1} ×${edge.amount} ${edge.unit}${edge.tag ? ` #${edge.tag}` : ''}${edge.consumption ? ` (${edge.consumption})` : ''}` : ({ equipment: '設備 (非消費)', stage: '進行条件', dimension: 'ディメンション条件', context: '文脈条件', opaque: '未解釈条件' }[edge.role]) }));
   return { ...graph, root: id, nodes: limit === 0 ? [] : nodes, edges: limit === 0 ? [] : edges, limit, truncated: graph.truncated || limit === 0 };
 }
 export function createAtlasServer(options: WebOptions): Server {
@@ -50,7 +56,7 @@ export function createAtlasServer(options: WebOptions): Server {
     ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
     ['/style.css', ['style.css', 'text/css; charset=utf-8']],
   ]);
-  return createServer((req, res) => {
+  return createServer({ maxHeaderSize: 327680 }, (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
@@ -73,7 +79,7 @@ export function createAtlasServer(options: WebOptions): Server {
       if (rootKind !== undefined && !['resource', 'process'].includes(rootKind)) throw new Error('Invalid root kind');
       let result: unknown; const limitations: string[] = [];
       switch (url.pathname) {
-        case '/api/meta': result = { snapshotId: model.snapshotId, contentHash: model.contentHash, generation: model.generation, resources: model.resources.length, processes: model.processes.length, scenario: options.scenario ?? null }; break;
+        case '/api/meta': result = { snapshotId: model.snapshotId, contentHash: model.contentHash, generation: model.generation, resources: model.resources.length, processes: model.processes.length, scenario: options.scenario ?? null, costRequest: options.costRequest ?? null }; break;
         case '/api/search': {
           const text = (q.get('q') ?? '').toLowerCase(), mod = q.get('mod');
           result = page(model.resources.filter(r => (!mod || r.id.startsWith(`${mod}:`)) && (r.id.toLowerCase().includes(text) || r.name.toLowerCase().includes(text))), limit, offset); break;
@@ -100,6 +106,13 @@ export function createAtlasServer(options: WebOptions): Server {
             result = { ...analysis, reachable: page(analysis.reachable, limit, offset), path: analysis.path.slice(0, limit * depth), stopReasons: page(analysis.stopReasons, limit, offset), unknown: page(analysis.unknown, limit, offset), diagnostics: page(analysis.diagnostics, limit, offset) };
             if (analysis.path.length > limit * depth) limitations.push('Path truncated by depth × limit; analysis evaluates the full model');
             limitations.push(...analysis.limitations); } break;
+        case '/api/cost': {
+          if (!options.scenario) { json(409, { error: 'Start serve with --scenario to calculate a selected plan' }); return; }
+          const text = q.get('request'); if (text && text.length > 32768) throw new Error('Cost request exceeds 32768 characters');
+          const request = text ? validate<CostRequest>('cost-request', JSON.parse(text)) : options.costRequest;
+          if (!request) throw new Error('Provide a cost request or start serve with --request');
+          const analysis = calculateCost(model, request, options.scenario); result = boundedCost(analysis, limit, offset); limitations.push(...analysis.limitations); break;
+        }
         default: json(404, { error: 'Unknown endpoint' }); return;
       }
       json(200, envelope({ endpoint: url.pathname, ...Object.fromEntries(q), limit, offset, depth, snapshotId: model.snapshotId }, result, model, limitations));

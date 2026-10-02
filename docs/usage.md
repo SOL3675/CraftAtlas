@@ -102,7 +102,7 @@ JEI を導入した統合サーバーでは、JEI runtime の準備完了後に 
 クライアント Suite には固定した mc-pilot backend と NeoForge helper も必要です。導入済みハーネスの [設定契約](../node_modules/mc-dev-harness/docs/configuration.md) と [ツール導入](../node_modules/mc-dev-harness/docs/tools.md) を確認します。backend を新規導入するコマンドは次のとおりです。
 
 ```powershell
-pnpm exec mch tools install mc-pilot --project .
+node node_modules/mc-dev-harness/dist/cli/main.js tools install mc-pilot --project .
 ```
 
 このハーネス版の backend installer は内部で `npm ci` を使います。npm が PATH にない場合は `--npm-command` に npm 実行ファイルの絶対パスを指定するか、管理メタデータと固定ハッシュを検証できる導入済み backend を再利用します。プロジェクト本体の依存管理は pnpm です。
@@ -110,25 +110,56 @@ pnpm exec mch tools install mc-pilot --project .
 installer は `harness.local.json` を編集しません。返された `backendRoot` を `backends.mc-pilot` に設定してください。NeoForge helper は lock の固定バイトを自動取得できます。取得済みのものを使う場合は `tools.mct-helper-neoforge-1.21.1` にその絶対パスを設定します。必要なら `assetCaches["1.21.1"]` に検証済みの `assets/objects` を設定できます。未指定ではクライアントが必要な資源を取得します。client wrapper は今回の隔離セッションで生成したワールドを開き、配布 JAR・JEI・Pack・helper をハッシュで確認して起動します。
 
 ```powershell
-pnpm exec mch targets --json
-pnpm exec mch doctor --json
-pnpm exec mch inspect --target neoforge-1.21.1 --json
-pnpm exec mch build --target neoforge-1.21.1 --json
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-offline --json
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-server --json
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-client --json
-pnpm exec mch test --all --profile release --json
+node node_modules/mc-dev-harness/dist/cli/main.js targets --json
+node node_modules/mc-dev-harness/dist/cli/main.js doctor --json
+node node_modules/mc-dev-harness/dist/cli/main.js inspect --target neoforge-1.21.1 --json
+node node_modules/mc-dev-harness/dist/cli/main.js build --target neoforge-1.21.1 --json
+node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-offline --json
+node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-server --json
+node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-client --json
+node node_modules/mc-dev-harness/dist/cli/main.js test --all --profile release --json
 ```
 
-release は `atlas-server`、`atlas-client`、`atlas-offline` の必須 Suite 全体を評価します。クライアントの準備がない環境でサーバーの成功だけを release の成功とは扱いません。結果・取得原本・配布成果物・ログ・診断・差分は `.harness/runs/<run-id>/` に保存します。
+release は NeoForge の `atlas-server`、`atlas-client`、`atlas-offline`、`atlas-world` と、Fabric の `atlas-fabric-server`、`atlas-fabric-client`、`atlas-offline` をすべて評価します。クライアントの準備がない環境でサーバーの成功だけを release の成功とは扱いません。結果・取得原本・配布成果物・ログ・診断・差分は `.harness/runs/<run-id>/` に保存します。
 
 意図的な不合格を確認する `atlas-negative` は release の必須 Suite から分離しています。
 
 ```powershell
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-negative --json
-pnpm exec mch report --run <run-id> --json
+node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-negative --json
+node node_modules/mc-dev-harness/dist/cli/main.js report --run <run-id> --json
 ```
 
 `atlas-negative` は実ゲームの必須レシピ / タグ不足を `failed` として出力し、ハーネスの実行結果も不合格になることを期待します。一方、通常の `atlas-server` の `atlas.failure-fixture` は、変更後の実ゲームで違反を検出できたことをテストして `passed` と記録します。
 
-現在の fixture はレシピ・タグ・JEI と診断の検証用です。Loot、Worldgen、自然資源の供給、サバイバル進行全体、Mekanism の動作電力や所要時間を検証した Pack ではありません。
+固定 datapack はレシピ・タグ変更に加え、確定 Loot、適用済み NeoForge Loot modifier、組み込み済み/登録のみの Feature を検証します。`atlas-world` は seed 8675309、通常生成、survival、normal difficulty で観測します。自然資源の継続供給、サバイバル進行全体、機械の動作電力や所要時間を検証した Pack ではありません。
+
+## Loot / Worldgen と有限観測
+
+通常の dump に `world.json` が加わります。原本・適用済み設定・未解釈コード・観測は別の根拠として保存します。登録された Feature だけで実際の生成を断定しません。Fabric の任意 loot hook は全列挙できないため、post pipeline は unknown です。
+
+```text
+craftatlas observe loot probe atlas:probe 10
+craftatlas observe block stone minecraft:stone minecraft:diamond_pickaxe 5
+craftatlas observe entity zombie minecraft:zombie 10
+craftatlas observe world chunk 0 0 31
+craftatlas dump after-observations
+```
+
+`observe block/entity` は Loot context のサンプリングで、実破壊/死亡イベントではありません。アイテムをプレイヤーへ付与しません。`observe world` は現在位置の指定 chunk 半径と高さを読み、新規 chunk を生成する場合があります。半径は0〜1、高さ範囲は最大64、Loot 試行は1〜1000です。
+
+`craftatlas/observations/<label>/` に条件・試行結果・manifest・completion を保存します。seed、生成器、dimension、chunk、player、biome、difficulty、時刻、weather、game rules、session/generation/environment hash を残します。dump には同じ取得世代の観測だけを添付し、reload 後は引き継ぎません。有限観測の未出現を不存在、見つかった量を定常供給率へ変換しません。
+
+## 選択経路の材料・コスト
+
+```powershell
+pnpm atlas cost --snapshot fixtures/definition-progression-snapshot.json --definitions definitions/fixture-progression.json --scenario fixtures/definition-progression-scenario.json --request fixtures/definition-progression-cost-request.json --limit 30 --json
+pnpm atlas serve --snapshot fixtures/definition-progression-snapshot.json --definitions definitions/fixture-progression.json --scenario fixtures/definition-progression-scenario.json --request fixtures/definition-progression-cost-request.json
+```
+
+`cost` は scenario と [計算プラン](../schemas/cost-request.schema.json) が必須です。routes で資源の生成処理と出力 index、selections で OR スロットの材料、target で目標数量・単位を選びます。UI の「材料・コスト」で JSON を編集し計算できます。候補から作る初期プランはユーザーが確認する選択案で、最適経路ではありません。
+
+初期設備・stage/dimension 解放は setup、反復材料と処理費は recurring に分けます。返却物・決定的副産物を再利用し、触媒は必要容量、工具は残り耐久と寿命から計上します。単位の異なるコストは合算しません。未知値を含む総額は null、取得済み小計は knownSubtotal です。
+
+確率出力の計算は mode=expectation と処理別の iid-bernoulli 宣言が必要です。独立試行で必要成功回数 n、確率 p の期待試行数 n/p と分散 n(1-p)/p² を計算します。ランダム副産物を上流材料へ自動充当しません。有限在庫・上流のバッチ丸め・ランダム耐久交換に完全分布が必要なら mean-flow と unknown を返します。complete/unknown/invalid は result.status で確認し、CLI の終了コード0を計算の完全性と解釈しません。
+
+Fabric の導入・固有アダプターは [Fabric 対応表](fabric.md)、測定と再現コマンドは [性能記録](performance.md) を参照してください。

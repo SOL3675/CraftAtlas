@@ -11,7 +11,7 @@ function error(err) { $('status').textContent = err.message; }
 function jsonDetails(parent, label, data) { const details = el('details'); details.append(el('summary', label), el('pre', JSON.stringify(data, null, 2))); parent.append(details); }
 function detail(node, evidence = state.evidence) {
   const container = $('details'); container.replaceChildren();
-  container.append(el('h3', node.id));
+  container.append(el('h3', node.id ?? node.target ?? '分析結果'));
   if (node.unknown?.length) container.append(el('p', `未解析: ${node.unknown.join(' · ')}`, 'notice'));
   if (node.execution) container.append(el('span', `${node.execution} / ${node.interpretation}`, `badge ${node.interpretation === 'opaque' ? 'unknown' : ''}`));
   if (node.inputs) jsonDetails(container, '材料スロット (AND / OR・数量・消費)', node.inputs);
@@ -32,7 +32,7 @@ function diagram(data, root) {
   const defs = svgEl('defs'), marker = svgEl('marker', { id: 'arrow', markerWidth: '8', markerHeight: '8', refX: '7', refY: '3', orient: 'auto', markerUnits: 'strokeWidth' }); marker.append(svgEl('path', { d: 'M0,0 L0,6 L7,3 z', fill: '#71948b' })); defs.append(marker); svg.append(defs);
   const positions = new Map();
   lanes.forEach((lane, index) => lane.forEach((node, row) => positions.set(node.id, { x: 20 + index * 300, y: 40 + row * 82, node })));
-  ['入力資源 / 設備', '処理 (AND / OR)', '出力資源'].forEach((label, index) => { const text = svgEl('text', { x: 20 + index * 300, y: 17, class: 'diagram-caption' }); text.textContent = label; svg.append(text); });
+  ['入力資源 / 前提条件', '処理 (AND / OR)', '出力資源'].forEach((label, index) => { const text = svgEl('text', { x: 20 + index * 300, y: 17, class: 'diagram-caption' }); text.textContent = label; svg.append(text); });
   data.edges.forEach(edge => {
     const a = positions.get(edge.from), b = positions.get(edge.to); if (!a || !b) return;
     const right = b.x >= a.x, x1 = a.x + (right ? 225 : 0), x2 = b.x + (right ? 0 : 225), y1 = a.y + 26, y2 = b.y + 26, mid = (x1 + x2) / 2;
@@ -68,15 +68,17 @@ async function select(id, kind = '') {
 async function graph() {
   if (!state.id) return;
   const revision = ++state.graphRevision;
+  const started = performance.now();
   try {
     const params = { id: state.id, depth: $('depth').value, direction: $('direction').value, limit: 100 }; if (state.kind) params.kind = state.kind;
     const body = await api('graph', params);
+    const received = performance.now();
     if (revision !== state.graphRevision) return;
     state.evidence = body.evidence; const data = body.result, root = $('graph'); root.replaceChildren();
     const byId = new Map(data.nodes.map(n => [n.id, n])); diagram(data, root);
     const nodeList = el('details'); nodeList.append(el('summary', `ノード一覧 · ${data.nodes.length} 件`)); root.append(nodeList);
     for (const kind of ['resource', 'process', 'predicate']) {
-      const section = el('section', undefined, 'graph-section'); section.append(el('h3', kind === 'resource' ? '資源 — 選択して経路を展開' : kind === 'process' ? '処理 — 選択して条件を確認' : '未解析の材料条件'));
+      const section = el('section', undefined, 'graph-section'); section.append(el('h3', kind === 'resource' ? '資源 — 選択して経路を展開' : kind === 'process' ? '処理 — 選択して条件を確認' : '材料・文脈・未解析の条件'));
       const nodes = el('div', undefined, 'nodes');
       data.nodes.filter(n => n.kind === kind).forEach(n => {
         const button = el('button', n.label, `node ${kind}`); button.append(el('small', n.data.id));
@@ -90,12 +92,19 @@ async function graph() {
       const node = byId.get(key); const button = el('button', node?.data.id ?? key); button.onclick = () => node && detail(node.data); row.append(button);
     }); relations.append(row); }); root.append(relations);
     if (data.truncated) root.append(el('p', 'ノード上限または選択した深さで表示を打ち切りました。対象ノードを選び、さらに展開できます。', 'notice'));
+    const built = performance.now();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (revision !== state.graphRevision) return;
+      const measurement = { nodes: data.nodes.length, edges: data.edges.length, apiMs: received - started, domBuildMs: built - received, frameReadyMs: performance.now() - built };
+      root.dataset.performance = JSON.stringify(measurement);
+      root.append(el('small', `局所グラフ ${measurement.nodes} ノード · API ${measurement.apiMs.toFixed(1)} ms · DOM ${measurement.domBuildMs.toFixed(1)} ms · 次フレーム ${measurement.frameReadyMs.toFixed(1)} ms`, 'render-metrics'));
+    }));
     $('status').textContent = '';
   } catch (err) { error(err); }
 }
 function setView(view) {
   document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
-  ['graph', 'diagnostics', 'diff', 'coverage'].forEach(key => $(`${key}-view`).hidden = key !== view);
+  ['graph', 'cost', 'diagnostics', 'diff', 'coverage'].forEach(key => $(`${key}-view`).hidden = key !== view);
 }
 function diagnosticCard(diagnostic, evidence) {
   const card = el('article', undefined, 'card'); card.append(el('span', `${diagnostic.severity} · ${diagnostic.status}`, `badge ${diagnostic.status === 'unknown' ? 'unknown' : ''}`), el('h3', diagnostic.target), el('p', diagnostic.message));
@@ -103,7 +112,7 @@ function diagnosticCard(diagnostic, evidence) {
   const details = el('button', '根拠を確認'); details.onclick = () => detail(diagnostic, evidence); card.append(details); return card;
 }
 async function loadView(view, offset = 0) {
-  setView(view); if (view === 'graph') return;
+  setView(view); if (view === 'graph' || view === 'cost') return;
   const root = $(view); root.replaceChildren(el('p', '読み込み中…', 'muted'));
   try {
     const body = await api(view, { limit: 30, offset }); root.replaceChildren();
@@ -138,8 +147,51 @@ $('explain').onclick = async () => {
   if (!state.id) return;
   try { const body = await api('explain', { id: state.id }); const root = $('analysis'); root.replaceChildren(); const analysis = body.result; root.append(el('h3', `到達分析: ${analysis.status}`)); jsonDetails(root, '到達経路・停止理由・未知条件・制限', analysis); detail(analysis, body.evidence); } catch (err) { error(err); }
 };
+$('cost-template').onclick = async () => {
+  if (!state.id || state.kind === 'process') { $('status').textContent = '資源を選択してからプランを作成してください。'; return; }
+  try {
+    const body = await api('sources', { id: state.id, limit: 30 });
+    const source = body.result.items.find(p => p.execution === 'executable') ?? body.result.items[0];
+    const output = source?.outputs.findIndex(o => o.resource === state.id) ?? -1;
+    const selections = {};
+    if (source) {
+      selections[source.id] = {};
+      source.inputs.forEach((slot, index) => {
+        const alternative = slot.alternatives.find(a => a.resource || a.members?.length);
+        const selected = alternative?.resource ?? alternative?.members?.[0];
+        if (selected) selections[source.id][index] = selected;
+      });
+    }
+    const request = { schemaVersion: 1, id: 'ui-selected-plan', target: { resource: state.id, amount: 1, unit: source?.outputs[output]?.unit ?? 'item' }, routes: source ? { [state.id]: { process: source.id, output } } : {}, selections, mode: 'deterministic', probabilityModels: {}, durability: {} };
+    $('cost-request').value = JSON.stringify(request, null, 2);
+    $('status').textContent = '表示した経路と材料選択を確認・編集してから計算してください。候補の先頭をテンプレートに使用しています。';
+  } catch (err) { error(err); }
+};
+function costTable(root, title, headers, rows) {
+  root.append(el('h3', title));
+  if (!rows.length) { root.append(el('p', 'このプランには項目がありません。', 'muted')); return; }
+  const table = el('table'), head = el('tr'); headers.forEach(h => head.append(el('th', h))); table.append(head);
+  rows.forEach(values => { const row = el('tr'); values.forEach(value => row.append(el('td', String(value)))); table.append(row); }); root.append(table);
+}
+$('cost-calculate').onclick = async () => {
+  try {
+    const request = JSON.parse($('cost-request').value), body = await api('cost', { request: JSON.stringify(request), limit: 100 });
+    const result = body.result, root = $('cost-result'); root.replaceChildren();
+    root.append(el('h3', `集計: ${{ complete: '完了', unknown: '不明部分あり', invalid: '無効なプラン' }[result.status]} · ${result.target.resource} ×${result.target.amount} ${result.target.unit}`));
+    ['setup', 'recurring'].forEach(phase => costTable(root, phase === 'setup' ? '初期設備・解放の材料' : '反復処理の材料', ['資源', '数量 / 単位', '初期在庫', '外部投入', '算定'], result.materials[phase].items.map(m => [m.resource, `${m.amount} ${m.unit}`, m.fromInventory ?? '?', m.external ?? '?', m.basis])));
+    costTable(root, '既知費用と総費用', ['種類', '単位', '総費用', '既知小計'], result.costs.total.items.map(c => [c.kind, c.unit, c.amount ?? '不明', c.knownSubtotal]));
+    costTable(root, '選択した工程', ['工程 / 区分', 'バッチ数', '算定', 'バッチ分散'], result.steps.items.map(s => [`${s.process} / ${s.phase === 'setup' ? '初期' : '反復'}`, s.batches, s.batchBasis, s.batchVariance ?? '?']));
+    costTable(root, '主産物・副産物・返却物', ['資源 / 役割', '数量 / 単位', '確率', '算定'], result.outputs.items.map(o => [`${o.resource} / ${o.role}`, `${o.amount ?? '?'} ${o.unit}`, o.probability ?? '?', o.basis]));
+    jsonDetails(root, '工具の耐久と触媒', { durability: result.durability, catalysts: result.catalysts });
+    jsonDetails(root, '根拠・診断・制限', { evidence: body.evidence, diagnostics: result.diagnostics, limitations: body.limitations });
+    if ([result.steps, result.outputs, result.materials.setup, result.materials.recurring, result.costs.total].some(page => page.truncated)) root.append(el('p', '表示上限100件で打ち切りました。CLI の offset で続きを取得できます。計算自体は全プランを使用しています。', 'notice'));
+    $('status').textContent = '';
+  } catch (err) { error(err); }
+};
 try {
   const { result: meta } = await api('meta'); $('identity').textContent = `${meta.snapshotId} · generation ${meta.generation} · ${meta.contentHash.slice(0, 10)}`;
   $('scenario').textContent = meta.scenario ? JSON.stringify(meta.scenario, null, 2) : '分析シナリオ未指定。--scenario で定義を指定してください。';
   $('explain').disabled = !meta.scenario; await search();
+  $('cost-calculate').disabled = !meta.scenario;
+  if (meta.costRequest) $('cost-request').value = JSON.stringify(meta.costRequest, null, 2);
 } catch (err) { error(err); }

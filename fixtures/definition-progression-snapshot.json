@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1, "id": "definition-progression-fixture", "session": "offline-contract", "generation": 0,
+  "mode": "dedicated", "minecraft": "1.21.1", "loader": "neoforge", "loaderVersion": "21.1.252", "collectorVersion": "0.1.0",
+  "mods": [{ "id": "minecraft", "version": "1.21.1" }, { "id": "atlas_fixture", "version": "2" }],
+  "environment": { "fixture": "Synthetic Phase 5 progression contract; no real Mod behavior or structure observation claimed" },
+  "resources": [
+    { "id": "minecraft:overworld", "kind": "dimension", "name": "Overworld access", "evidence": [] },
+    { "id": "atlas_fixture:stone", "kind": "item", "name": "Fixture stone", "evidence": [] },
+    { "id": "atlas_fixture:reinforced_stone", "kind": "item", "name": "Fixture alternative frame material", "evidence": [] },
+    { "id": "atlas_fixture:chalk", "kind": "item", "name": "Fixture chalk", "evidence": [] },
+    { "id": "atlas_fixture:research_notes", "kind": "item", "name": "Fixture research notes", "evidence": [] },
+    { "id": "atlas_fixture:gate_core", "kind": "item", "name": "Fixture gate core", "evidence": [] },
+    { "id": "atlas_fixture:installed_gate_frame", "kind": "capability", "name": "Installed fixture multiblock", "evidence": [] },
+    { "id": "atlas_fixture:installed_circle", "kind": "capability", "name": "Installed fixture magic circle", "evidence": [] },
+    { "id": "atlas_fixture:gate_researched", "kind": "stage", "name": "Gate research unlocked", "evidence": [] },
+    { "id": "atlas_fixture:realm", "kind": "dimension", "name": "Fixture realm access", "evidence": [] },
+    { "id": "atlas_fixture:reagent", "kind": "item", "name": "Fixture reagent", "evidence": [] },
+    { "id": "atlas_fixture:filled_vial", "kind": "item", "name": "Fixture filled vial", "evidence": [] },
+    { "id": "atlas_fixture:empty_vial", "kind": "item", "name": "Fixture returned vial", "evidence": [] },
+    { "id": "atlas_fixture:focus", "kind": "item", "name": "Fixture catalyst", "evidence": [] },
+    { "id": "atlas_fixture:wisp", "kind": "mob", "name": "Summoned fixture entity", "evidence": [] },
+    { "id": "atlas_fixture:gem", "kind": "item", "name": "Fixture probabilistic drop", "evidence": [] },
+    { "id": "atlas_fixture:dust", "kind": "item", "name": "Fixture byproduct", "evidence": [] }
+  ],
+  "tags": { "atlas_fixture:frame_materials": ["atlas_fixture:stone", "atlas_fixture:reinforced_stone"] },
+  "recipes": [], "coverage": [{ "dataset": "recipes", "type": "*", "status": "complete", "enumerated": 0, "interpreted": null, "reasons": ["Synthetic fixture routes are explicit definition additions"] }],
+  "completion": { "status": "complete", "errors": [] }
+}

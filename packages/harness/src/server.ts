@@ -12,6 +12,7 @@ import { diff } from '../../core/src/diff.ts';
 import { bytesHash, hash } from '../../core/src/hash.ts';
 import { evaluate } from './evaluate.ts';
 import { runArtifacts, saveResults, waitFor, RequiredUnsupported } from './common.ts';
+import { verifyCommonFixture } from './fabric-common.ts';
 import type { Case } from './common.ts';
 import type { Expectations } from '../../core/src/types.ts';
 const root = resolve(fileURLToPath(new URL('../../../', import.meta.url))), session = resolve(process.argv[2]), runRoot = resolve(process.argv[3]), target = process.argv[4];
@@ -46,6 +47,7 @@ try {
   assert.ok(!baseline.recipes.some(r => r.id === 'minecraft:gold_nugget'));
   assert.ok(model.processes.some(p => p.type === 'mekanism:enriching' && p.interpretation === 'supported' && p.unknown.length === 0 && p.inputs.every(i => i.alternatives.every(a => a.resource || a.tag))));
   assert.deepEqual(audit(model, expectations).filter(d => d.severity === 'error'), []);
+  writeFileSync(join(session, 'common-fixture.json'), JSON.stringify(verifyCommonFixture(baseline, root), null, 2));
   if (negative) {
     const expected = JSON.parse(readFileSync(join(root, 'fixtures/negative-expectations.json'), 'utf8'));
     const diagnostics = audit(model, expected); writeFileSync(join(session, 'diagnostics.json'), JSON.stringify(diagnostics, null, 2));

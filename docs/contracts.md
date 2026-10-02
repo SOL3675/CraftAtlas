@@ -28,7 +28,7 @@
 
 入力は数量・単位と `consumed` / `catalyst` / `durability` を持ち、出力は主産物・副産物・返却物と確率を持ちます。確率 `null` は未取得、`0` は確率ゼロ、`1` は決定的な出力です。カスタム述語や Data Components の未解釈部分を、通常のアイテム ID 一致へ落としません。
 
-設備・ステージ・ディメンション・opaque 条件は `requirements` に保持します。設備アイテムの所持と、設置済みで利用可能な設備は別です。後者はシナリオの `equipment`、または明示した設備 / capability 資源の構築経路で表します。構築費と繰り返し材料費を分けます。
+設備・ステージ・ディメンション・context・opaque 条件は `requirements` に保持します。設備アイテムの所持と、設置済みで利用可能な設備は別です。後者はシナリオの `equipment`、または明示した設備 / capability 資源の構築経路で表します。stage/dimension も対応する資源種別の解放処理を辿ります。context は `scenario.gameRules.lootContext` の明示した事実と型付き predicate を比較し、未指定は unknown です。構築費と繰り返し材料費を分けます。
 
 根拠は `runtime`、`viewer`、`definition`、`inference`、`observation` を区別し、ソース・アダプター・原本位置を参照します。処理の主要フィールドに `fieldEvidence` を持ちます。補足定義による置換は `fieldHistory` と原本を残します。最終状態から、上書きしたスクリプトのファイル / 行や削除理由を復元できるとは主張しません。
 
@@ -64,7 +64,23 @@ SQLite は正規化モデルから再構築する検索キャッシュです。`
 
 CLI の終了コード `0` は問い合わせの正常完了、`1` は入力・実行エラーです。現状 `audit` の `0` は期待条件の合格を意味しません。`result.items` と `result.total`、各診断の重要度・状態を評価し、省略されたページを無視しないでください。ハーネスは CLI の終了コードだけで合否を決めません。
 
-HTTP は起動時に指定したモデルだけを読む GET API です。loopback の Host とOrigin のホスト一致を確認し、検索・inspect・sources・uses・graph・coverage・diagnostics・diff・explain を提供します。パスを指定して任意ファイルを読む API はありません。表示フィルターはシナリオの経路禁止条件を変更しません。
+HTTP は起動時に指定したモデルだけを読む GET API です。loopback の Host とOrigin のホスト一致を確認し、検索・inspect・sources・uses・graph・coverage・diagnostics・diff・explain・cost を提供します。cost は起動時の scenario と --request、または query の JSON request を使用し、最大32768文字とスキーマを検証します。パスを指定して任意ファイルを読む API はありません。表示フィルターはシナリオの経路禁止条件を変更しません。
+
+## World 原本と観測
+
+Snapshot の任意 `world` は lootTables、lootModifiers、lootSources、biomes、dimensions、features、observations、limitations を持ちます。各 codec 原本は id/type/data/error として保存し、`world.json` を他 dataset と同じ manifest/checksum/意味ハッシュの対象にします。空配列を取得成功の根拠にせず dataset 別 coverage を確認します。
+
+Loot のテーブル・参照・条件・関数と、後段 modifier の実適用順を保存します。既定の block/Mob mapping はイベント全体の証明ではありません。未知コードや出力変更が残る場合は確定到達へ昇格しません。適用済み biome/spawn、dimension generator の biome membership と generation settings から feature 関係を辿り、registry-only feature と分けます。生成率やコードによる spawn 制限は未解釈です。
+
+観測は session/generation/environment hash、seed、generator、dimension、chunk、player、difficulty、biome、context、時刻/weather/gameRules、試行数と結果を保存します。観測自身の manifest/completion を検証し、同じ世代の dump のみへ添付します。意味比較では取得用 ID/時刻/session/generation を除き、試行条件と結果は保持します。有限観測 process は display/unknown として扱い、不存在・定常供給率・無限供給を証明しません。
+
+## 選択経路の計算契約
+
+[cost-request](../schemas/cost-request.schema.json) は target の資源/数量/単位、routes の process と output index、selections の OR 材料、mode、probabilityModels、durability、任意 inventoryUnits を宣言します。循環や禁じた処理、単位不一致は invalid、未解釈条件や追加分布が必要な計算は unknown とします。最大1000展開・深さ100・数量1e12の範囲です。
+
+結果は setup/recurring の材料・コスト、バッチ、返却物、副産物、触媒、耐久、根拠・診断を保持します。単位別 cost は未知の総額 amount=null と既知の小計 knownSubtotal を分けます。選択経路の積算であり最適化や並列の完了時刻は計算しません。
+
+IID Bernoulli の明示宣言で期待試行数と試行分散を計算し、出力間の独立性は independentOutputs で別に宣言します。ランダム副産物を供給へ自動充当せず、期待値だけで有限在庫・バッチ丸め・耐久交換を確定しません。完全分布が不足する上流は mean-flow/unknown、全材料・総コストの結合分散は対象外です。CLI/HTTP は配列ごとに通常のページ契約を使い、同一 core 計算を返します。
 
 ## ハーネス結果と成果物
 

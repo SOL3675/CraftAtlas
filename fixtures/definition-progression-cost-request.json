@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1, "id": "fixture-progression-cost",
+  "target": { "resource": "atlas_fixture:gem", "amount": 1, "unit": "item" },
+  "routes": {
+    "atlas_fixture:gem": { "process": "atlas_fixture:harvest_wisp", "output": 0 },
+    "atlas_fixture:wisp": { "process": "atlas_fixture:summon_wisp", "output": 0 },
+    "atlas_fixture:installed_circle": { "process": "atlas_fixture:draw_circle", "output": 0 },
+    "atlas_fixture:installed_gate_frame": { "process": "atlas_fixture:build_gate_frame", "output": 0 },
+    "atlas_fixture:gate_researched": { "process": "atlas_fixture:research_gate", "output": 0 },
+    "atlas_fixture:realm": { "process": "atlas_fixture:open_realm", "output": 0 }
+  },
+  "selections": { "atlas_fixture:build_gate_frame": { "0": "atlas_fixture:stone" } },
+  "mode": "expectation", "probabilityModels": { "atlas_fixture:harvest_wisp": { "kind": "iid-bernoulli", "independentOutputs": true } },
+  "durability": { "atlas_fixture:chalk": { "remaining": 20, "lifetime": 100 } }
+}

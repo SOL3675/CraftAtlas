@@ -108,3 +108,32 @@ test('local graph preserves slot AND / alternative OR and display filters leave 
   assert.equal(localGraph(m, 'goal', { types: [] }).nodes.length, 1); assert.equal(analyze(m, s, 'goal').status, 'reachable'); assert.equal(localGraph(m, 'goal', { limit: 2 }).truncated, true);
   const rooted = localGraph(m, 'last'); assert.equal(rooted.nodes[0]!.kind, 'process'); assert.equal(rooted.nodes.some(n => n.id === 'resource:last'), false); assert.ok(rooted.edges.some(e => e.role === 'input'));
 });
+test('diff impact follows produced stage and dimension gates without treating context IDs as resources', () => {
+  const research = process('research', [slot({ resource: 'a' })], 'b'), travel = process('travel', [], 'c'), last = process('last', [], 'goal');
+  travel.requirements = [{ kind: 'stage', id: 'b', evidence: ['ev'] }]; last.requirements = [{ kind: 'dimension', id: 'c', evidence: ['ev'] }];
+  const context = process('context-only', [], 'd'); context.requirements = [{ kind: 'context', id: 'b', predicate: true, evidence: ['ev'] }];
+  const before = model([research, travel, last, context]); before.resources.find(r => r.id === 'b')!.kind = 'stage'; before.resources.find(r => r.id === 'c')!.kind = 'dimension';
+  const after = structuredClone(before); after.processes[0]!.enabled = false;
+  const impact = diff(before, after).impact;
+  assert.deepEqual(impact.processes, ['last', 'research', 'travel']); assert.deepEqual(impact.resources, ['b', 'c', 'goal']);
+  assert.equal(diff(before, after, { limit: 3 }).impact.truncated, true);
+});
+test('local graph follows stage and dimension unlocks and shows distinct context and opaque predicates', () => {
+  const research = process('research', [slot({ resource: 'a' })], 'b'), travel = process('travel', [], 'c'), last = process('last', [], 'goal');
+  travel.requirements = [{ kind: 'stage', id: 'b', evidence: ['ev'] }];
+  last.requirements = [{ kind: 'dimension', id: 'c', evidence: ['ev'] }, { kind: 'context', id: 'raining', predicate: false, evidence: ['ev'] }, { kind: 'opaque', id: 'linked-circle', predicate: { pattern: ['symbol', 'rune'] }, evidence: ['ev'] }];
+  const m = model([research, travel, last]); m.resources.find(r => r.id === 'b')!.kind = 'stage'; m.resources.find(r => r.id === 'c')!.kind = 'dimension';
+  const before = structuredClone(m), s = scenario(), analysis = analyze(m, s, 'goal');
+  const graph = localGraph(m, 'goal', { depth: 3, direction: 'sources' });
+  assert.ok(graph.nodes.some(n => n.id === 'process:research')); assert.ok(graph.nodes.some(n => n.id === 'process:travel'));
+  assert.ok(graph.edges.some(e => e.role === 'stage' && e.source === 'resource:b' && e.target === 'process:travel'));
+  assert.ok(graph.edges.some(e => e.role === 'dimension' && e.source === 'resource:c' && e.target === 'process:last'));
+  const context = graph.nodes.find(n => n.condition?.kind === 'context')!, opaque = graph.nodes.find(n => n.condition?.kind === 'opaque')!;
+  assert.equal(context.kind, 'predicate'); assert.match(context.label, /raining = false/); assert.deepEqual(context.condition, last.requirements[1]); assert.ok(context.evidence.includes('ev'));
+  assert.equal(opaque.kind, 'predicate'); assert.match(opaque.unknown.join(), /no interpreter/); assert.deepEqual(opaque.condition, last.requirements[2]);
+  assert.equal(graph.nodes.some(n => n.id === 'resource:raining' || n.id === 'resource:linked-circle'), false);
+  assert.ok(graph.edges.some(e => e.role === 'context')); assert.ok(graph.edges.some(e => e.role === 'opaque'));
+  assert.ok(localGraph(m, 'b', { direction: 'uses', depth: 1 }).nodes.some(n => n.id === 'process:travel'));
+  assert.equal(localGraph(m, 'goal', { depth: 1, limit: 2 }).truncated, true);
+  assert.deepEqual(m, before); assert.deepEqual(analyze(m, s, 'goal'), analysis);
+});

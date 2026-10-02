@@ -28,6 +28,7 @@ public final class Collector {
         long generation = 1;
         boolean active = true, busy = false, reloading = false;
         String status = "ready", last = "";
+        final JsonArray observations = new JsonArray();
     }
     private static State state(MinecraftServer server) { synchronized (STATES) { return STATES.computeIfAbsent(server, s -> new State()); } }
     public static void started(MinecraftServer server) {
@@ -35,7 +36,7 @@ public final class Collector {
         LOG.info("CRAFTATLAS READY session={} generation={}", s.session, s.generation);
     }
     public static void reloading(MinecraftServer server) {
-        State s = state(server); synchronized(s) { ++s.generation; s.reloading = true; s.status = "reloading"; }
+        State s = state(server); synchronized(s) { ++s.generation; s.reloading = true; s.status = "reloading"; while (!s.observations.isEmpty()) s.observations.remove(0); }
         LOG.info("CRAFTATLAS RELOADING session={} generation={}", s.session, s.generation);
     }
     public static void reloaded(MinecraftServer server) {
@@ -104,11 +105,51 @@ public final class Collector {
             LOG.error("CRAFTATLAS FAILED label={}", label, e); source.sendFailure(Component.literal(e.toString())); return 0;
         }
     }
+    public static int observe(CommandSourceStack source, String label, java.util.function.Supplier<JsonObject> capture) {
+        MinecraftServer server = source.getServer(); State s = state(server); long generation;
+        if (!label.matches("[a-zA-Z0-9_-]{1,80}")) { source.sendFailure(Component.literal("Invalid observation label")); return 0; }
+        synchronized(s) {
+            if (!s.active || s.busy || s.reloading) { source.sendFailure(Component.literal("Collector cannot observe while busy/reloading/stopped")); return 0; }
+            s.busy = true; s.status = "observing"; generation = s.generation;
+        }
+        try {
+            JsonObject observation = capture.get(); observation.addProperty("schemaVersion", 1); observation.addProperty("id", label);
+            observation.addProperty("session", s.session); observation.addProperty("generation", generation);
+            observation.addProperty("environmentHash", hash(environment(server)));
+            Path root = System.getProperty("craftatlas.output") == null ? server.getServerDirectory().resolve("craftatlas") : Path.of(System.getProperty("craftatlas.output"));
+            Path target = root.resolve("observations").resolve(label).toAbsolutePath();
+            source.sendSuccess(() -> Component.literal("CRAFTATLAS OBSERVATION CAPTURED label=" + label + " generation=" + generation), false);
+            WRITER.execute(() -> {
+                Path temporary = null;
+                try {
+                    if (Files.exists(target)) throw new java.io.IOException("Refusing to overwrite " + target);
+                    temporary = target.resolveSibling(label + ".tmp-" + UUID.randomUUID()); Files.createDirectories(temporary);
+                    String json = canonical(observation); JsonFiles.write(temporary.resolve("observation.json"), json);
+                    String manifest = canonical(object("schemaVersion", 1, "id", label, "session", s.session, "generation", generation,
+                        "files", object("observation.json", hash(json)), "contentHash", hash(observation)));
+                    JsonFiles.write(temporary.resolve("manifest.json"), manifest);
+                    JsonFiles.write(temporary.resolve("completion.json"), canonical(object("status", "complete", "errors", array(), "id", label, "manifestHash", hash(manifest))));
+                    synchronized(s) {
+                        if (!s.active || s.reloading || s.generation != generation) throw new IllegalStateException("Observation generation invalidated before publication");
+                        if (Files.exists(target)) throw new java.io.IOException("Refusing to overwrite " + target);
+                        Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE); s.observations.add(observation); s.status = "ready"; s.last = target.toString();
+                    }
+                    LOG.info("CRAFTATLAS OBSERVATION COMPLETE label={} generation={} path={}", label, generation, target);
+                } catch (Exception error) {
+                    if (temporary != null) try { Files.writeString(temporary.resolve("completion.json"), canonical(object("status", "failed", "errors", array(error.toString()), "id", label))); } catch (Exception failure) { LOG.error("Could not invalidate observation {}", temporary, failure); }
+                    synchronized(s) { s.status = "failed"; } LOG.error("CRAFTATLAS OBSERVATION FAILED label={} reason={}", label, error.toString());
+                } finally { synchronized(s) { s.busy = false; } }
+            });
+            return 1;
+        } catch (Exception error) { synchronized(s) { s.busy = false; s.status = "failed"; } source.sendFailure(Component.literal(error.toString())); LOG.error("CRAFTATLAS OBSERVATION FAILED label={}", label, error); return 0; }
+    }
     private static long usedMemory() { Runtime r = Runtime.getRuntime(); return r.totalMemory() - r.freeMemory(); }
     private static JsonObject capture(MinecraftServer server, String session, long generation, JsonObject viewer) throws Exception {
         JsonArray resources = new JsonArray(); JsonObject tags = new JsonObject();
         registry(BuiltInRegistries.ITEM, "item", "", resources, tags);
         registry(BuiltInRegistries.FLUID, "fluid", "fluid:", resources, tags);
+        registry(BuiltInRegistries.BLOCK, "block", "block:", resources, tags);
+        registry(BuiltInRegistries.ENTITY_TYPE, "entity", "entity:", resources, tags);
         JsonArray recipes = new JsonArray(), errors = new JsonArray(); Map<String, int[]> counts = new TreeMap<>();
         var ops = server.registryAccess().createSerializationContext(JsonOps.INSTANCE);
         List<RecipeHolder<?>> holders = new ArrayList<>(server.getRecipeManager().getRecipes());
@@ -122,35 +163,35 @@ public final class Collector {
             recipes.add(raw);
         }
         JsonArray coverage = new JsonArray();
-        coverage.add(coverage("registry", "item+fluid", "complete", resources.size(), null, array()));
-        coverage.add(coverage("tags", "item+fluid", "complete", tags.size(), null, array()));
+        coverage.add(coverage("registry", "item+fluid+block+entity", "complete", resources.size(), null, array()));
+        coverage.add(coverage("tags", "item+fluid+block+entity", "complete", tags.size(), null, array()));
         for (var entry : counts.entrySet()) coverage.add(coverage("recipes", entry.getKey(), entry.getValue()[0] == entry.getValue()[1] ? "complete" : "partial", entry.getValue()[0], null,
             entry.getValue()[0] == entry.getValue()[1] ? array() : array("Recipe codec serialization failed; raw ID/type retained")));
-        coverage.add(coverage("loot", "*", "unsupported", null, null, array("Loot tables and Global Loot Modifiers are outside Phase 0-4")));
-        coverage.add(coverage("worldgen", "*", "unsupported", null, null, array("World generation, spawn and code-driven supply are not acquired")));
+        JsonObject world = WorldCollector.capture(server, coverage, errors); NeoWorldHooks.supplement(server, world, coverage, errors);
+        State current = state(server); synchronized(current) { world.add("observations", current.observations.deepCopy()); }
         if (viewer == null) coverage.add(coverage("viewer", "jei", "unsupported", null, null, array("Server-only capture; use integrated client /craftatlas-client dump after JEI runtime is ready")));
         JsonArray mods = new JsonArray();
         ModList.get().getMods().stream().sorted(Comparator.comparing(m -> m.getModId())).forEach(m -> mods.add(object("id", m.getModId(), "version", m.getVersion().toString())));
         JsonObject environment;
         try {
             environment = environment(server);
-            coverage.add(coverage("environment", "recipe+tag resources/configuration/datapacks", "complete", environment.getAsJsonObject("datapackResources").size(), null,
-                array("Hashes preserve final resource source; overwriting script file/line remains unknown", "Other resource directories are not enumerated by the Phase 0-4 environment adapter")));
+            coverage.add(coverage("environment", "recipe/tag/loot/worldgen resources/configuration/datapacks", "complete", environment.getAsJsonObject("datapackResources").size(), null,
+                array("Hashes preserve final resource source; overwriting script file/line remains unknown", "Resource directories outside declared recipe/tag/loot/worldgen/dimension/loader scopes are not enumerated")));
         } catch (Exception e) {
             String reason = "Required environment capture failed: " + e;
             errors.add(reason);
             environment = object("captureStatus", "failed", "reasons", array(reason));
-            coverage.add(coverage("environment", "recipe+tag resources/configuration/datapacks", "failed", null, null, array(reason)));
+            coverage.add(coverage("environment", "recipe/tag/loot/worldgen resources/configuration/datapacks", "failed", null, null, array(reason)));
         }
         JsonObject snapshot = object("schemaVersion", 1, "session", session, "generation", generation,
             "mode", server.isDedicatedServer() ? "dedicated" : "integrated", "minecraft", SharedConstants.getCurrentVersion().getName(),
             "loader", "neoforge", "loaderVersion", ModList.get().getModContainerById("neoforge").orElseThrow().getModInfo().getVersion().toString(),
             "collectorVersion", ModList.get().getModContainerById("craftatlas").orElseThrow().getModInfo().getVersion().toString(),
-            "mods", mods, "environment", environment, "resources", resources, "tags", tags, "recipes", recipes, "coverage", coverage,
+            "mods", mods, "environment", environment, "resources", resources, "tags", tags, "recipes", recipes, "coverage", coverage, "world", world,
             "completion", object("status", errors.isEmpty() ? "complete" : "partial", "errors", errors));
         if (viewer != null) snapshot.add("viewer", viewer);
         snapshot.addProperty("id", hash(object("resources", resources, "tags", tags, "recipes", recipes, "environment", environment, "mods", mods,
-            "viewer", viewer)).substring(0, 24));
+            "viewer", viewer, "world", world)).substring(0, 24));
         return snapshot;
     }
     private static <T> void registry(Registry<T> registry, String kind, String prefix, JsonArray resources, JsonObject tags) {
@@ -174,7 +215,7 @@ public final class Collector {
         // Hash actual selected datapack resources, retaining source/priority instead of guessing an author.
         JsonObject datapackResources = new JsonObject();
         // Minecraft 1.21.1 rejects an empty lookup path. Enumerate explicit contract directories.
-        for (String directory : List.of("recipe", "tags")) {
+        for (String directory : List.of("recipe", "tags", "loot_table", "loot_modifiers", "worldgen", "dimension", "dimension_type", "neoforge")) {
             for (var entry : new TreeMap<>(server.getResourceManager().listResources(directory, id -> true)).entrySet()) {
                 try (var stream = entry.getValue().open()) { datapackResources.add(entry.getKey().toString(), object("source", entry.getValue().sourcePackId(), "sha256", hash(stream.readAllBytes()))); }
             }

@@ -1,7 +1,8 @@
 import type { Model, Process } from './types.ts';
+import { canonical } from './hash.ts';
 
-export interface GraphNode { id: string; target: string; kind: 'resource' | 'process' | 'predicate'; label: string; unknown: string[]; evidence: string[] }
-export interface GraphEdge { source: string; target: string; role: 'input' | 'output' | 'equipment'; slot?: number; alternative?: number; amount?: number; unit?: string; consumption?: string; tag?: string; probability?: number | null }
+export interface GraphNode { id: string; target: string; kind: 'resource' | 'process' | 'predicate'; label: string; unknown: string[]; evidence: string[]; condition?: Process['requirements'][number] }
+export interface GraphEdge { source: string; target: string; role: 'input' | 'output' | 'equipment' | 'stage' | 'dimension' | 'context' | 'opaque'; slot?: number; alternative?: number; amount?: number; unit?: string; consumption?: string; tag?: string; probability?: number | null }
 export interface LocalGraph { target: string; nodes: GraphNode[]; edges: GraphEdge[]; truncated: boolean; depth: number; limit: number; direction: string }
 
 /** View-only filters never alter reachability scenarios. Slots retain their AND/OR identifiers. */
@@ -28,7 +29,14 @@ export function localGraph(model: Model, target: string, options: { depth?: numb
         if (addNode({ id, target: `${p.id}/inputs/${slot}/${alternative}`, kind: 'predicate', label: a.tag ? `#${a.tag}` : 'uninterpreted ingredient', unknown: ['No proven matching stack'], evidence: value.evidence })) edges.push({ source: id, target: `process:${p.id}`, role: 'input', slot, alternative, amount: value.amount, unit: value.unit });
       }
     }
-    for (const r of p.requirements) if (r.kind === 'equipment') input(r.id, { role: 'equipment' });
+    for (const [index, r] of p.requirements.entries()) {
+      if (r.kind === 'equipment' || r.kind === 'stage' || r.kind === 'dimension') input(r.id, { role: r.kind });
+      else {
+        const id = `predicate:${p.id}:requirement:${index}`, predicate = r.predicate === undefined ? r.kind === 'context' ? 'true' : '' : canonical(r.predicate);
+        const preview = predicate.length > 120 ? predicate.slice(0, 117) + '...' : predicate;
+        if (addNode({ id, target: `${p.id}/requirements/${index}`, kind: 'predicate', label: `${r.kind}: ${r.id}${preview ? ' = ' + preview : ''}`, unknown: [r.kind === 'context' ? 'Context must be supplied explicitly by the scenario' : 'Condition has no interpreter'], evidence: [...new Set([...p.evidence, ...r.evidence])], condition: structuredClone(r) })) edges.push({ source: id, target: `process:${p.id}`, role: r.kind });
+      }
+    }
     for (const o of p.outputs) if (addNode(resourceNode(o.resource))) { edges.push({ source: `process:${p.id}`, target: `resource:${o.resource}`, role: 'output', amount: o.amount, unit: o.unit, probability: o.probability }); queue.push({ id: o.resource, level: level + 1 }); }
   };
   if (rootProcess) {
@@ -39,7 +47,7 @@ export function localGraph(model: Model, target: string, options: { depth?: numb
   while (queue.length) {
     const { id, level } = queue.shift()!;
     if ((visited.get(id) ?? Infinity) <= level) continue; visited.set(id, level);
-    const ps = model.processes.filter(p => (!options.types || options.types.includes(p.type)) && ((direction !== 'uses' && p.outputs.some(o => o.resource === id)) || (direction !== 'sources' && (p.inputs.some(i => i.alternatives.some(a => a.resource === id || a.members?.includes(id))) || p.requirements.some(r => r.kind === 'equipment' && r.id === id))))).sort((a, b) => a.id.localeCompare(b.id));
+    const ps = model.processes.filter(p => (!options.types || options.types.includes(p.type)) && ((direction !== 'uses' && p.outputs.some(o => o.resource === id)) || (direction !== 'sources' && (p.inputs.some(i => i.alternatives.some(a => a.resource === id || a.members?.includes(id))) || p.requirements.some(r => ['equipment', 'stage', 'dimension'].includes(r.kind) && r.id === id))))).sort((a, b) => a.id.localeCompare(b.id));
     if (level >= depth) { if (ps.some(p => !expanded.has(p.id))) truncated = true; continue; }
     for (const p of ps) includeProcess(p, level);
   }

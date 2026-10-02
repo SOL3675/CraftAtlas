@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "samplesPerTarget": 5,
+  "depth": 2,
+  "nodeLimit": 100,
+  "limits": {
+    "apiMs": 1500,
+    "domBuildMs": 100,
+    "frameReadyMs": 250
+  },
+  "scope": "Fixed representative packs, local IAB; double requestAnimationFrame measures frame readiness, not exact GPU paint"
+}

@@ -1,0 +1,113 @@
+import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
+import { resolve, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import assert from 'node:assert/strict';
+import { loadConfig } from '../../../node_modules/mc-dev-harness/dist/core/config.js';
+import { OwnedServer } from '../../../node_modules/mc-dev-harness/dist/adapters/runtime/server.js';
+import { normalize } from '../../core/src/normalize.ts';
+import { readSnapshot } from '../../core/src/snapshot.ts';
+import { buildDatabase } from '../../core/src/db.ts';
+import { audit } from '../../core/src/audit.ts';
+import { diff } from '../../core/src/diff.ts';
+import { bytesHash, hash } from '../../core/src/hash.ts';
+import { evaluate } from './evaluate.ts';
+import { verifyCommonFixture } from './fabric-common.ts';
+import { runArtifacts, saveResults, waitFor, RequiredUnsupported } from './common.ts';
+import type { Case } from './common.ts';
+import type { Expectations } from '../../core/src/types.ts';
+const root = resolve(fileURLToPath(new URL('../../../', import.meta.url))), session = resolve(process.argv[2]), runRoot = resolve(process.argv[3]), target = process.argv[4];
+const negative = process.argv.includes('--negative'), cases: Case[] = [], ids = negative ? ['atlas.expected-failure'] : ['atlas.snapshot', 'atlas.reload', 'atlas.failure-fixture', 'atlas.stopped'];
+const loaded = await loadConfig(root), artifacts = runArtifacts(runRoot, target);
+const version = loaded.config.targets[target].loaderVersion!;
+const runtime = { kind: 'server' as const, capabilities: ['dedicated-server'], command: { executable: '{java:game}', args: ['-Xmx2G', '-Dcraftatlas.testWriteDelayMillis=2000', '-jar', '{tool:fabric-server-1.21.1}', 'nogui'] }, readyPattern: 'Done \\(.*\\)! For help' };
+const server = new OwnedServer(loaded, target, runtime, join(session, 'game'), join(session, 'game-logs'));
+const controller = new AbortController();
+process.once('SIGTERM', () => controller.abort()); process.once('SIGINT', () => controller.abort());
+let stage = ids[0], finished = false;
+try {
+  process.stderr.write('Atlas: preparing recorded distribution and fixed pack\n');
+  await server.prepare(artifacts, runRoot, controller.signal);
+  mkdirSync(join(server.directory, 'world/datapacks'), { recursive: true });
+  cpSync(join(root, 'fixtures/datapack'), join(server.directory, 'world/datapacks/atlas'), { recursive: true });
+  cpSync(join(root, 'fixtures/scripts'), join(server.directory, 'scripts'), { recursive: true });
+  writeFileSync(join(server.directory, 'server.properties'), readFileSync(join(server.directory, 'server.properties'),'utf8').replace('level-type=minecraft:flat','level-type=minecraft:normal'));
+  await server.start(controller.signal); await server.waitReady();
+  const capture = async (label: string) => {
+    const mark = server.mark(); server.command(`craftatlas dump ${label}`);
+    await server.waitForOutput(new RegExp(`CRAFTATLAS COMPLETE label=${label}`), 120000, mark);
+    const path = join(server.directory, 'craftatlas', label);
+    await waitFor('Fresh snapshot completion', () => existsSync(join(path, 'completion.json')), Boolean);
+    const snapshot = readSnapshot(path);
+    if (snapshot.completion.status !== 'complete') throw new RequiredUnsupported('Required raw collection is partial: ' + snapshot.completion.errors.join('; '));
+    return snapshot;
+  };
+  const baseline = await capture('baseline'), model = normalize(baseline);
+  const expectations: Expectations = { schemaVersion:1,recipes:['atlas:added'],nonemptyTags:['atlas:alternatives'],supportedTypes:['techreborn:grinder'],reachable:[],unreachable:[] };
+  writeFileSync(join(session,'common-fixture.json'),JSON.stringify(verifyCommonFixture(baseline, root),null,2));
+  assert.ok(baseline.world && baseline.world.lootTables.length > 100 && baseline.world.biomes.length > 10 && baseline.world.features.length > 100);
+  assert.ok(baseline.recipes.length > 100); assert.equal(baseline.mode, 'dedicated');
+  assert.ok(baseline.recipes.some(r => r.id === 'techreborn:grinder/andesite_dust'));
+  assert.ok(!baseline.mods.some(m => m.id === 'emi'));
+  const grinder = model.processes.find(p => p.id === 'techreborn:grinder/andesite_dust')!;
+  assert.equal(grinder.outputs[0]?.amount,2); assert.ok(grinder.costs.some(c => c.kind === 'base-energy' && c.amount === 1080)); assert.ok(grinder.costs.some(c => c.kind === 'base-time' && c.amount === 270));
+  assert.ok(model.processes.some(p => p.type === 'techreborn:grinder' && p.interpretation === 'supported'));
+  assert.deepEqual(audit(model, expectations).filter(d => d.severity === 'error'), []);
+  if (negative) {
+    const expected = JSON.parse(readFileSync(join(root, 'fixtures/negative-expectations.json'), 'utf8'));
+    const diagnostics = audit(model, expected); writeFileSync(join(session, 'diagnostics.json'), JSON.stringify(diagnostics, null, 2));
+    cases.push({ ...evaluate(model, expected), id: stage, message: 'Deliberate missing recipe/tag fixture; diagnostics.json' });
+  } else {
+    const repeat = normalize(await capture('repeat')); assert.equal(model.contentHash, repeat.contentHash);
+    const observe = async (label: string, command: string) => {
+      const mark = server.mark(); server.command(`craftatlas observe ${command.replace('{label}',label)}`);
+      await server.waitForOutput(new RegExp(`CRAFTATLAS OBSERVATION COMPLETE label=${label}`),120000,mark);
+      const directory = join(server.directory,'craftatlas/observations',label), bytes = readFileSync(join(directory,'observation.json')),
+        manifestBytes = readFileSync(join(directory,'manifest.json')), manifest = JSON.parse(manifestBytes.toString()), completion = JSON.parse(readFileSync(join(directory,'completion.json'),'utf8')), observation = JSON.parse(bytes.toString());
+      assert.equal(completion.status,'complete'); assert.equal(completion.manifestHash,bytesHash(manifestBytes));
+      assert.equal(manifest.files['observation.json'],bytesHash(bytes)); assert.equal(manifest.contentHash,hash(observation));
+      assert.equal(observation.session,baseline.session); assert.equal(observation.generation,baseline.generation);
+      assert.equal(observation.seed,'8675309'); assert.equal(observation.generator.type,'minecraft:noise');
+      assert.equal(observation.environmentHash,hash(baseline.environment)); return observation;
+    };
+    const loot = await observe('loot_probe','loot {label} atlas:probe 2'); assert.equal(loot.totals['minecraft:diamond'],4); assert.equal(loot.totals['minecraft:emerald'],undefined);
+    const block = await observe('block_probe','block {label} minecraft:stone minecraft:diamond_pickaxe 2'); assert.equal(block.context.breakPerformed,false); assert.equal(block.totals['minecraft:cobblestone'],2);
+    const entity = await observe('entity_probe','entity {label} minecraft:zombie 2'); assert.equal(entity.context.deathPerformed,false); assert.equal(entity.samples.length,2);
+    const natural = await observe('world_probe','world {label} 0 0 3'); assert.equal(Object.values(natural.totals).reduce((n:number,v)=>n+Number(v),0),1024);
+    const observed = await capture('observed'); assert.equal(observed.world?.observations?.length,4);
+    assert.equal(normalize(observed).processes.find(p=>p.id==='observation:world_probe')?.execution,'display');
+    writeFileSync(join(session,'observation-evidence.json'),JSON.stringify({loot,block,entity,natural},null,2));
+    buildDatabase(join(session, 'baseline.sqlite'), model);
+    cases.push({ id: stage, status: 'passed', message: `Runtime recipes=${baseline.recipes.length}; semantic hash ${model.contentHash}` });
+    stage = 'atlas.reload';
+    unlinkSync(join(server.directory, 'world/datapacks/atlas/data/atlas/recipe/added.json'));
+    writeFileSync(join(server.directory, 'world/datapacks/atlas/data/minecraft/recipe/stick.json'), JSON.stringify({ type: 'minecraft:crafting_shapeless', ingredients: [{ item: 'minecraft:cobblestone' }], result: { id: 'minecraft:stick', count: 5 } }));
+    writeFileSync(join(server.directory, 'world/datapacks/atlas/data/atlas/tags/item/alternatives.json'), '{"replace":true,"values":["minecraft:dirt"]}');
+    const mark = server.mark(); server.command('craftatlas dump interrupted');
+    await server.waitForOutput(/CRAFTATLAS CAPTURED label=interrupted/, 120000, mark);
+    server.command('reload');
+    await server.waitForOutput(/CRAFTATLAS RELOADING/, 120000, mark);
+    await server.waitForOutput(/CRAFTATLAS RELOADED/, 120000, mark);
+    await server.waitForOutput(/CRAFTATLAS FAILED label=interrupted/, 120000, mark);
+    assert.equal(existsSync(join(server.directory, 'craftatlas/interrupted/completion.json')), false);
+    const changed = await capture('changed'); assert.equal(changed.session, baseline.session); assert.ok(changed.generation > baseline.generation);
+    assert.equal(changed.world?.observations?.length,0);
+    assert.ok(!changed.recipes.some(r => r.id === 'atlas:added')); assert.deepEqual(changed.tags['atlas:alternatives'], ['minecraft:dirt']);
+    const after = normalize(changed), differences = diff(model, after);
+    assert.notEqual(model.contentHash, after.contentHash); assert.ok(differences.changes.length >= 3);
+    writeFileSync(join(session, 'diff.json'), JSON.stringify(differences, null, 2)); buildDatabase(join(session, 'changed.sqlite'), after);
+    cases.push({ id: stage, status: 'passed', message: `Reload generation ${changed.generation}; diff.json` });
+    stage = 'atlas.failure-fixture';
+    const diagnostics = audit(after, expectations); assert.ok(diagnostics.some(d => d.severity === 'error' && d.target === 'atlas:added'));
+    writeFileSync(join(session, 'diagnostics.json'), JSON.stringify(diagnostics, null, 2));
+    cases.push({ id: stage, status: 'passed', message: 'Actual removed required recipe detected as failed expectation; diagnostics.json' });
+  }
+  finished = true;
+} catch (error) { process.stderr.write(String(error) + '\n'); cases.push({ id: stage, status: error instanceof RequiredUnsupported ? 'unsupported' : error instanceof assert.AssertionError ? 'failed' : 'infrastructure-error', message: String(error) }); }
+finally {
+  const stopped = await server.stop();
+  if (!negative) cases.push({ id: 'atlas.stopped', status: stopped?.exitCode === 0 ? 'passed' : 'infrastructure-error', message: `Game exit ${stopped?.exitCode}` });
+  for (const id of ids) if (!cases.some(c => c.id === id)) cases.push({ id, status: 'skipped', message: 'Prerequisite case did not complete' });
+  const evidence = await server.collectEvidence();
+  writeFileSync(join(session, 'evidence.json'), JSON.stringify({ schemaVersion: 1, runId: runRoot.split(/[\\/]/).at(-1), target, artifacts, packLockHash: bytesHash(readFileSync(join(root, 'fixtures/pack-fabric.lock.json'))), inputs: ['fixtures/datapack/data/atlas/recipe/added.json','fixtures/datapack/data/atlas/tags/item/alternatives.json'].map(path => ({ path, sha256: bytesHash(readFileSync(join(root, path))) })), evidence: evidence.map(path => relative(runRoot, join(server.directory, path))), casesHash: hash(cases), finished }, null, 2));
+  saveResults(session, cases);
+}

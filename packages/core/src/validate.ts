@@ -19,6 +19,7 @@ export function validateSnapshot(value: unknown): Snapshot {
   if (s.completion.status === 'failed') throw new Error('Snapshot failed');
   if (s.viewer && (s.viewer.session !== s.session || s.viewer.generation !== s.generation)) throw new Error('Stale viewer generation/session');
   if (s.viewer) unique(s.viewer.recipes.map(r => r.id), 'viewer source ID');
+  if (s.world) for (const kind of ['lootTables', 'lootModifiers', 'lootSources', 'biomes', 'dimensions', 'features'] as const) unique(s.world[kind].map(r => r.id), `world ${kind} ID`);
   for (const c of s.coverage) if (c.enumerated !== null && c.interpreted !== null && c.interpreted > c.enumerated) throw new Error('Invalid coverage denominator');
   return s;
 }

@@ -8,9 +8,15 @@ export interface ModelDiff {
   provenance: { normalizerChanged: boolean; environmentChanged: boolean; modsChanged: boolean; definitionsChanged: boolean };
 }
 const sorted = (values: unknown[]) => [...values].sort((a, b) => canonical(a).localeCompare(canonical(b)));
+function opaqueMeaning(p: Process): unknown {
+  if (p.type !== 'minecraft:observation' || !p.raw || typeof p.raw !== 'object' || Array.isArray(p.raw)) return p.raw;
+  // Observer execution metadata changes on a repeated sample; trial conditions and results do not.
+  const acquisition = new Set(['timestamp', 'capturedAt', 'createdAt', 'session', 'generation']);
+  return Object.fromEntries(Object.entries(p.raw).filter(([key]) => !acquisition.has(key)));
+}
 export function processMeaning(p: Process): Record<string, unknown> {
   const inputs = p.inputs.map(({ evidence, alternatives, ...s }) => ({ ...s, alternatives: sorted(alternatives.map(a => ({ ...a, ...(a.members ? { members: [...a.members].sort() } : {}) }))) }));
-  return { id: p.id, type: p.type, inputs: p.constraints ? inputs : sorted(inputs), outputs: sorted(p.outputs.map(({ evidence, ...o }) => o)), requirements: sorted(p.requirements.map(({ evidence, ...r }) => r)), interpretation: p.interpretation, execution: p.execution, enabled: p.enabled, unknown: [...p.unknown].sort(), costs: sorted(p.costs), conflicts: [...p.conflicts].sort(), constraints: p.constraints ?? null, opaqueRawHash: p.interpretation === 'opaque' ? hash(p.raw) : null, viewerSources: sorted((p.viewerSources ?? []).map(v => ({ recipeId: v.recipeId, category: v.category, inputs: v.inputs.map(({ evidence, ...s }) => s), outputs: v.outputs.map(({ evidence, ...o }) => o), equipment: [...v.equipment].sort(), execution: v.execution, unknown: [...v.unknown].sort() }))) };
+  return { id: p.id, type: p.type, inputs: p.constraints ? inputs : sorted(inputs), outputs: sorted(p.outputs.map(({ evidence, ...o }) => o)), requirements: sorted(p.requirements.map(({ evidence, ...r }) => r)), interpretation: p.interpretation, execution: p.execution, enabled: p.enabled, unknown: [...p.unknown].sort(), costs: sorted(p.costs), conflicts: [...p.conflicts].sort(), constraints: p.constraints ?? null, opaqueRawHash: p.interpretation === 'opaque' ? hash(opaqueMeaning(p)) : null, viewerSources: sorted((p.viewerSources ?? []).map(v => ({ recipeId: v.recipeId, category: v.category, inputs: v.inputs.map(({ evidence, ...s }) => s), outputs: v.outputs.map(({ evidence, ...o }) => o), equipment: [...v.equipment].sort(), execution: v.execution, unknown: [...v.unknown].sort() }))) };
 }
 /** Compare meaning, independent of acquisition IDs, order, raw data, and timestamps. */
 export function diff(before: Model, after: Model, options: { limit?: number } = {}): ModelDiff {
@@ -38,7 +44,7 @@ export function diff(before: Model, after: Model, options: { limit?: number } = 
   }
   while (queue.length) {
     const id = queue.shift()!;
-    for (const p of all) if (p.inputs.some(i => i.alternatives.some(a => a.resource === id || a.members?.includes(id))) || p.requirements.some(r => r.kind === 'equipment' && r.id === id)) enqueueProcess(p);
+    for (const p of all) if (p.inputs.some(i => i.alternatives.some(a => a.resource === id || a.members?.includes(id))) || p.requirements.some(r => ['equipment', 'stage', 'dimension'].includes(r.kind) && r.id === id)) enqueueProcess(p);
   }
   const definitionVersions = (m: Model) => [...new Set(m.evidence.filter(e => e.kind === 'definition').map(e => e.source))].sort();
   return { schemaVersion: 1, before: before.snapshotId, after: after.snapshotId, changes, impact: { resources: [...resources].sort(), processes: [...processes].sort(), truncated }, provenance: { normalizerChanged: before.normalizerVersion !== after.normalizerVersion, environmentChanged: hash(before.environment) !== hash(after.environment), modsChanged: hash(sorted(before.mods)) !== hash(sorted(after.mods)), definitionsChanged: hash(definitionVersions(before)) !== hash(definitionVersions(after)) } };

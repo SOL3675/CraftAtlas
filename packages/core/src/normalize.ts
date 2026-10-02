@@ -1,10 +1,13 @@
 import { hash } from './hash.ts';
 import { processMeaning } from './diff.ts';
+import { normalizeWorld } from './world.ts';
+import { normalizeTechReborn, techRebornAdapter } from './techreborn.ts';
 import { validateSnapshot, validateModel } from './validate.ts';
 import type { Alternative, Diagnostic, Json, Model, Process, RawRecipe, Slot, Snapshot } from './types.ts';
-export const NORMALIZER_VERSION = '0.1.0';
+export const NORMALIZER_VERSION = '0.2.0';
 export const adapters = [
-  { id: 'vanilla', version: '1', minecraft: ['1.21.1'], loaders: ['neoforge'], types: ['minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'minecraft:smelting', 'minecraft:blasting', 'minecraft:smoking', 'minecraft:campfire_cooking', 'minecraft:stonecutting', 'minecraft:smithing_transform'], limitations: ['dynamic recipes', 'custom predicates', 'world sources'] },
+  techRebornAdapter,
+  { id: 'vanilla', version: '1', minecraft: ['1.21.1'], loaders: ['neoforge', 'fabric'], types: ['minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'minecraft:smelting', 'minecraft:blasting', 'minecraft:smoking', 'minecraft:campfire_cooking', 'minecraft:stonecutting', 'minecraft:smithing_transform'], limitations: ['dynamic recipes', 'custom predicates'] },
   { id: 'mekanism-enriching', version: '1', minecraft: ['1.21.1'], loaders: ['neoforge'], mod: 'mekanism', versions: ['10.7.14'], types: ['mekanism:enriching'], limitations: ['energy depends on machine upgrades/configuration', 'other Mekanism recipe types', 'chemical ingredients'] },
 ];
 export function diagnostic(m: Pick<Model, 'snapshotId'>, rule: string, target: string, message: string, severity: Diagnostic['severity'] = 'warning', status: Diagnostic['status'] = 'confirmed', evidence: string[] = []): Diagnostic {
@@ -23,8 +26,8 @@ function alternatives(value: any, tags: Record<string, string[]>): Alternative[]
 export function normalize(snapshot: Snapshot): Model {
   const s = validateSnapshot(snapshot);
   const m: Model = { schemaVersion: 1, snapshotId: s.id, session: s.session, generation: s.generation, normalizerVersion: NORMALIZER_VERSION, environment: s.environment, mods: s.mods, resources: structuredClone(s.resources), tags: structuredClone(s.tags), processes: [], evidence: [], coverage: structuredClone(s.coverage), diagnostics: [], contentHash: '' };
-  for (const kind of ['item', 'fluid']) m.evidence.push({ id: `runtime:registry:${kind}`, kind: 'runtime', source: s.id, adapter: 'neoforge-registry-1.21.1', pointer: `resources/${kind}` });
-  m.evidence.push({ id: 'runtime:tags', kind: 'runtime', source: s.id, adapter: 'neoforge-tags-1.21.1', pointer: 'tags' });
+  for (const kind of new Set(['item', 'fluid', ...s.resources.map(r => r.kind)])) m.evidence.push({ id: `runtime:registry:${kind}`, kind: 'runtime', source: s.id, adapter: `${s.loader}-registry-1.21.1`, pointer: `resources/${kind}` });
+  m.evidence.push({ id: 'runtime:tags', kind: 'runtime', source: s.id, adapter: `${s.loader}-tags-1.21.1`, pointer: 'tags' });
   for (const r of [...s.recipes].sort((a, b) => a.id.localeCompare(b.id))) {
     const ev = `runtime:${r.id}`;
     const p: Process = { id: r.id, sourceId: r.id, type: r.type, inputs: [], outputs: [], requirements: [], evidence: [ev], interpretation: 'supported', execution: 'executable', unknown: [], enabled: true, costs: [], raw: r.data, fieldEvidence: {}, conflicts: [] };
@@ -37,7 +40,8 @@ export function normalize(snapshot: Snapshot): Model {
         if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid ingredient amount');
         p.inputs.push({ alternatives: alternatives(ingredient, s.tags), amount, unit: 'item', consumption: 'consumed', evidence: [ev] });
       };
-      if (r.type === 'minecraft:crafting_shaped') {
+      if (adapter.id === 'techreborn-grinder') normalizeTechReborn(p, r, s, ev);
+      else if (r.type === 'minecraft:crafting_shaped') {
         if (!Array.isArray(data.pattern) || data.pattern.length < 1 || data.pattern.length > 3 || !data.pattern.every((row: unknown) => typeof row === 'string' && row.length >= 1 && row.length <= 3 && row.length === data.pattern[0].length) || !data.pattern.some((row: string) => row.trim())) throw new Error('Invalid crafting grid');
         let slotIndex = 0;
         p.constraints = { kind: 'shaped-grid', layout: data.pattern.map((row: string) => [...row].map(symbol => symbol === ' ' ? null : slotIndex++)) };
@@ -52,10 +56,12 @@ export function normalize(snapshot: Snapshot): Model {
         p.costs.push({ kind: 'energy', amount: null, unit: 'J', basis: 'unacquired configuration and upgrades' });
       }
       else add(data.ingredient);
-      const result = data.result ?? data.output;
-      const resource = typeof result === 'string' ? result : result?.id ?? result?.item;
-      if (!resource || !Number.isFinite(result?.count ?? data.count ?? 1) || (result?.count ?? data.count ?? 1) <= 0) throw new Error('Missing or invalid result');
-      p.outputs.push({ resource, amount: result?.count ?? data.count ?? 1, unit: 'item', role: 'primary', probability: 1, evidence: [ev], ...(result?.components ? { components: result.components } : {}) });
+      if (adapter.id !== 'techreborn-grinder') {
+        const result = data.result ?? data.output;
+        const resource = typeof result === 'string' ? result : result?.id ?? result?.item;
+        if (!resource || !Number.isFinite(result?.count ?? data.count ?? 1) || (result?.count ?? data.count ?? 1) <= 0) throw new Error('Missing or invalid result');
+        p.outputs.push({ resource, amount: result?.count ?? data.count ?? 1, unit: 'item', role: 'primary', probability: 1, evidence: [ev], ...(result?.components ? { components: result.components } : {}) });
+      }
       const machine: Record<string, string> = { 'minecraft:smelting': 'minecraft:furnace', 'minecraft:blasting': 'minecraft:blast_furnace', 'minecraft:smoking': 'minecraft:smoker', 'minecraft:campfire_cooking': 'minecraft:campfire', 'minecraft:stonecutting': 'minecraft:stonecutter', 'minecraft:smithing_transform': 'minecraft:smithing_table', 'minecraft:crafting_shaped': 'minecraft:crafting_table', 'minecraft:crafting_shapeless': 'minecraft:crafting_table' };
       const smallCraft = r.type === 'minecraft:crafting_shapeless' && p.inputs.length <= 4 || r.type === 'minecraft:crafting_shaped' && data.pattern.length <= 2 && data.pattern.every((row: string) => row.length <= 2);
       if (machine[r.type] && !smallCraft) p.requirements.push({ kind: 'equipment', id: machine[r.type], evidence: [ev] });
@@ -83,6 +89,7 @@ export function normalize(snapshot: Snapshot): Model {
     const interpreted = processes.filter(p => p.interpretation === 'supported' && !missing(p).length).length;
     m.coverage.push({ dataset: 'normalization', type, status: interpreted === processes.length ? 'complete' : 'partial', enumerated: processes.length, interpreted, reasons: [...new Set(processes.flatMap(missing))] });
   }
+  normalizeWorld(m, s);
   if (s.viewer) mergeViewer(m, s);
   m.contentHash = semanticHash(m); return validateModel(m);
 }
@@ -91,6 +98,7 @@ export function semanticHash(m: Model): string {
 }
 function mergeViewer(m: Model, s: Snapshot) {
   const viewer = s.viewer!;
+  const viewerKind = viewer.kind ?? 'jei';
   const serverProcesses = [...m.processes], byId = new Map(serverProcesses.map(p => [p.sourceId, p]));
   const byOutput = new Map<string, string[]>();
   for (const p of serverProcesses) {
@@ -98,7 +106,7 @@ function mergeViewer(m: Model, s: Snapshot) {
     const values = byOutput.get(key) ?? []; values.push(p.id); byOutput.set(key, values);
   }
   for (const v of viewer.recipes) {
-    const ev = `viewer:${v.id}`; m.evidence.push({ id: ev, kind: 'viewer', source: s.id, adapter: 'jei-19.22.1.316', pointer: `viewer/${v.id}` });
+    const ev = `viewer:${v.id}`; m.evidence.push({ id: ev, kind: 'viewer', source: s.id, adapter: `${viewerKind}-${viewer.version ?? (viewerKind === 'jei' ? '19.22.1.316' : 'unrecorded')}`, pointer: `viewer/${v.id}` });
     const p = v.recipeId && !v.unknown.some(u => /correspondence is ambiguous/.test(u)) ? byId.get(v.recipeId) : undefined;
     if (p) {
       (p.viewerSources ??= []).push(structuredClone(v));
@@ -108,7 +116,7 @@ function mergeViewer(m: Model, s: Snapshot) {
       // Category catalysts are candidates; never promote them to runtime requirements.
       p.fieldEvidence.equipmentCandidates = [ev];
     } else {
-      const id = `jei:${v.id}`;
+      const id = `${viewerKind}:${v.id}`;
       m.processes.push({ id, sourceId: v.id, type: v.category, inputs: v.inputs.map(i => ({ ...i, evidence: [ev] })), outputs: v.outputs.map(o => ({ ...o, evidence: [ev] })), requirements: v.equipment.map(id => ({ kind: 'opaque', id: `equipment-candidate:${id}`, evidence: [ev] })), evidence: [ev], interpretation: 'opaque', execution: v.execution, unknown: ['Viewer-only executability is unconfirmed', ...v.unknown], enabled: true, costs: [], raw: v.raw, viewerSources: [structuredClone(v)], fieldEvidence: { inputs: [ev], outputs: [ev] }, conflicts: [] });
       const candidates = byOutput.get(hash(v.outputs.map(o => [o.resource, o.amount]))) ?? [];
       if (candidates.length) m.diagnostics.push(diagnostic(m, 'ambiguous-viewer-match', id, `Possible matches: ${candidates.join(', ')}`, 'info', 'unknown', [ev]));

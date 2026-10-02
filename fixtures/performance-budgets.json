@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "neoforge-1.21.1": {
+      "suite": "atlas-server",
+      "loader": "neoforge",
+      "minimumCases": 4,
+      "limits": {
+        "resources": {
+          "min": 3000,
+          "max": 20000
+        },
+        "recipes": {
+          "min": 2800,
+          "max": 10000
+        },
+        "processes": {
+          "min": 4500,
+          "max": 20000
+        },
+        "evidence": {
+          "min": 6000,
+          "max": 30000
+        },
+        "snapshotJsonBytes": {
+          "min": 4000000,
+          "max": 16000000
+        },
+        "dbBytes": {
+          "min": 40000000,
+          "max": 67108864
+        },
+        "captureMs": {
+          "min": 0.001,
+          "max": 2000
+        },
+        "captureHeapDeltaBytes": {
+          "min": 0,
+          "max": 536870912
+        },
+        "nodePeakRssBytes": {
+          "min": 1000000,
+          "max": 1073741824
+        },
+        "readMs": {
+          "min": 0.001,
+          "max": 750
+        },
+        "normalizeP95Ms": {
+          "min": 0.001,
+          "max": 1500
+        },
+        "dbBuildMs": {
+          "min": 0.001,
+          "max": 6000
+        },
+        "searchP95Ms": {
+          "min": 0.001,
+          "max": 10
+        },
+        "sourcesP95Ms": {
+          "min": 0.001,
+          "max": 50
+        },
+        "usesP95Ms": {
+          "min": 0.001,
+          "max": 50
+        },
+        "graphP95Ms": {
+          "min": 0.001,
+          "max": 500
+        }
+      }
+    },
+    "fabric-1.21.1": {
+      "suite": "atlas-fabric-server",
+      "loader": "fabric",
+      "minimumCases": 4,
+      "limits": {
+        "resources": {
+          "min": 2000,
+          "max": 20000
+        },
+        "recipes": {
+          "min": 3700,
+          "max": 10000
+        },
+        "processes": {
+          "min": 9000,
+          "max": 20000
+        },
+        "evidence": {
+          "min": 7000,
+          "max": 30000
+        },
+        "snapshotJsonBytes": {
+          "min": 4000000,
+          "max": 16000000
+        },
+        "dbBytes": {
+          "min": 80000000,
+          "max": 134217728
+        },
+        "captureMs": {
+          "min": 0.001,
+          "max": 2000
+        },
+        "captureHeapDeltaBytes": {
+          "min": 0,
+          "max": 536870912
+        },
+        "nodePeakRssBytes": {
+          "min": 1000000,
+          "max": 1073741824
+        },
+        "readMs": {
+          "min": 0.001,
+          "max": 750
+        },
+        "normalizeP95Ms": {
+          "min": 0.001,
+          "max": 1500
+        },
+        "dbBuildMs": {
+          "min": 0.001,
+          "max": 6000
+        },
+        "searchP95Ms": {
+          "min": 0.001,
+          "max": 10
+        },
+        "sourcesP95Ms": {
+          "min": 0.001,
+          "max": 50
+        },
+        "usesP95Ms": {
+          "min": 0.001,
+          "max": 50
+        },
+        "graphP95Ms": {
+          "min": 0.001,
+          "max": 500
+        }
+      }
+    }
+  }
+}

@@ -9,16 +9,18 @@ import { analyze } from '../../core/src/analyze.ts';
 import { audit } from '../../core/src/audit.ts';
 import { diff } from '../../core/src/diff.ts';
 import { applyDefinitions } from '../../core/src/definitions.ts';
-import type { DefinitionPack, Expectations, Model, Scenario } from '../../core/src/types.ts';
-import { bounds, createAtlasServer, envelope } from '../../web/src/server.ts';
+import { calculateCost } from '../../core/src/cost.ts';
+import type { CostRequest, DefinitionPack, Expectations, Model, Scenario } from '../../core/src/types.ts';
+import { bounds, boundedCost, createAtlasServer, envelope } from '../../web/src/server.ts';
 
 const help = `Craft Atlas — offline snapshot search and analysis
 Usage: pnpm atlas <command> [target] [options]
-Commands: validate import inspect sources uses coverage explain audit diff serve
+Commands: validate import inspect sources uses coverage explain audit diff cost serve
 Input: --snapshot <JSON or directory> | --model <JSON> | --db <SQLite>
 Options: --json --snapshot-id <id> --limit <0..100> --offset <0..1000000>
          --depth <0..5> --scenario <JSON> --expectations <JSON>
          --definitions <JSON> (repeatable) --before <snapshot/model> --after <snapshot/model>
+Cost: --request <selected-plan JSON> --scenario <JSON>
 Import: --snapshot <path> --db <destination>
 Serve: --port <0..65535> --host <127.0.0.1|localhost|::1>
 Display filters never change scenario forbiddenProcesses or allowedTypes.
@@ -30,7 +32,7 @@ function fileModel(path: string): Model {
 }
 function parse(argv: string[]) {
   const options: Record<string, string> = {}, definitions: string[] = [], positional: string[] = [];
-  const names = new Set(['snapshot', 'model', 'db', 'snapshot-id', 'limit', 'offset', 'depth', 'scenario', 'expectations', 'before', 'after', 'definitions', 'port', 'host']);
+  const names = new Set(['snapshot', 'model', 'db', 'snapshot-id', 'limit', 'offset', 'depth', 'scenario', 'expectations', 'before', 'after', 'definitions', 'port', 'host', 'request']);
   for (let index = 0; index < argv.length; index++) {
     const value = argv[index];
     if (value === '--json' || value === '--help') { options[value.slice(2)] = 'true'; continue; }
@@ -49,12 +51,13 @@ export async function runCLI(argv: string[]): Promise<number> {
   try {
     const { options: o, definitions, command, target } = parse(argv);
     if (!command || o.help) { process.stdout.write(help); return 0; }
-    const commands = ['validate', 'import', 'inspect', 'sources', 'uses', 'coverage', 'explain', 'audit', 'diff', 'serve'];
+    const commands = ['validate', 'import', 'inspect', 'sources', 'uses', 'coverage', 'explain', 'audit', 'diff', 'cost', 'serve'];
     if (!commands.includes(command)) throw new Error(`Unknown command ${command}`);
     const limit = bounds(o.limit, 30, 100, 'limit'), offset = bounds(o.offset, 0, 1_000_000, 'offset'), depth = bounds(o.depth, 1, 5, 'depth');
     query = { command, target: target ?? null, limit, offset, depth, snapshotId: o['snapshot-id'] ?? null };
     const scenario = o.scenario ? validate<Scenario>('scenario', readJson(o.scenario)) : undefined;
     const expectations = o.expectations ? validate<Expectations>('expectations', readJson(o.expectations)) : undefined;
+    const costRequest = o.request ? validate<CostRequest>('cost-request', readJson(o.request)) : undefined;
     const readInput = (): Model => {
       let model: Model;
       if (o.snapshot) model = normalize(readSnapshot(o.snapshot));
@@ -72,7 +75,7 @@ export async function runCLI(argv: string[]): Promise<number> {
     const model = readInput(); let result: unknown; const limitations: string[] = [];
     const page = <T>(items: T[]) => ({ items: items.slice(offset, offset + limit), total: items.length, limit, offset, truncated: offset > 0 || offset + limit < items.length });
     const sources = () => model.processes.filter(p => p.outputs.some(output => output.resource === target));
-    const uses = () => model.processes.filter(p => p.inputs.some(slot => slot.alternatives.some(a => a.resource === target || a.members?.includes(target!))) || p.requirements.some(r => r.kind === 'equipment' && r.id === target));
+    const uses = () => model.processes.filter(p => p.inputs.some(slot => slot.alternatives.some(a => a.resource === target || a.members?.includes(target!))) || p.requirements.some(r => ['equipment', 'stage', 'dimension'].includes(r.kind) && r.id === target));
     const requiredTarget = () => { if (!target) throw new Error(`${command} requires a target ID`); };
     const dbQuery = (kind: 'sources' | 'uses' | 'coverage') => {
       const db = openDatabase(o.db);
@@ -107,6 +110,10 @@ export async function runCLI(argv: string[]): Promise<number> {
       case 'audit':
         if (!expectations) throw new Error('audit requires --expectations');
         result = page(audit(model, expectations, scenario)); break;
+      case 'cost': {
+        if (!costRequest || !scenario) throw new Error('cost requires --request and --scenario');
+        const analysis = calculateCost(model, costRequest, scenario); result = boundedCost(analysis, limit, offset); limitations.push(...analysis.limitations); break;
+      }
       case 'diff': {
         if (!o.before) throw new Error('diff requires --before');
         const comparison = diff(fileModel(o.before), model);
@@ -115,7 +122,7 @@ export async function runCLI(argv: string[]): Promise<number> {
       case 'serve': {
         const host = o.host ?? '127.0.0.1'; if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('serve accepts only loopback hosts');
         const port = bounds(o.port, 4317, 65535, 'port');
-        const server = createAtlasServer({ model, scenario, expectations, before: o.before ? fileModel(o.before) : undefined });
+        const server = createAtlasServer({ model, scenario, expectations, before: o.before ? fileModel(o.before) : undefined, costRequest });
         await new Promise<void>((done, reject) => { server.once('error', reject); server.listen(port, host, done); });
         const address = server.address(); const url = `http://${host === '::1' ? '[::1]' : host}:${typeof address === 'object' && address ? address.port : port}`;
         process.stdout.write(o.json ? JSON.stringify(envelope(query, { url, snapshotId: model.snapshotId }, model)) + '\n' : `Craft Atlas: ${url}\n`);

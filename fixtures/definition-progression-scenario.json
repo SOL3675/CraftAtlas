@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1, "id": "fixture-progression-start",
+  "inventory": { "atlas_fixture:stone": 12, "atlas_fixture:reinforced_stone": 8, "atlas_fixture:chalk": 1, "atlas_fixture:research_notes": 1, "atlas_fixture:gate_core": 1, "atlas_fixture:reagent": 3, "atlas_fixture:filled_vial": 1, "atlas_fixture:focus": 1 },
+  "equipment": [], "stages": [], "dimensions": ["minecraft:overworld"], "forbiddenProcesses": [], "allowedTypes": null,
+  "supply": "renewable", "closed": false, "closedResources": [],
+  "gameRules": { "fixture": "Declared renewable base supplies and verified predicates are assumptions of the offline test, not observations", "lootContext": { "gate_multiblock_valid": true, "circle_drawing_valid": true, "summoning_context_valid": true, "harvest_context_valid": true } }
+}

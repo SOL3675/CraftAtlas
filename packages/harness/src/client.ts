@@ -67,8 +67,24 @@ try {
   metadata.arguments.game.push('--quickPlaySingleplayer', 'atlas-world');
   writeFileSync(versionPath, JSON.stringify(metadata)); evidence.quickPlay = { path: relative(session, versionPath), originalHash: bytesHash(original), modifiedHash: bytesHash(readFileSync(versionPath)), world: 'atlas-world' };
   process.stderr.write('Atlas client: launching integrated world\n');
-  evidence.launch = await adapter.launch(); await adapter.waitReady(240000, true);
+  evidence.launch = await adapter.launch(); await adapter.waitReady(240000, false);
   const log = join(clientDir, 'logs/latest.log');
+  const currentScreen = await waitFor('Fresh world load dialog or integrated server', async () => await adapter!.control('gui.info') as any,
+    screen => screen.title === 'Worlds using Experimental Settings are not supported' || /CRAFTATLAS READY/.test(readFileSync(log, 'utf8')), 180000);
+  if (currentScreen.title === 'Worlds using Experimental Settings are not supported' && currentScreen.category === 'screen') {
+      await waitFor('Experimental settings dialog accepted', async () => {
+        const screen = await adapter!.control('gui.info') as any;
+        if (screen.title === currentScreen.title && screen.category === 'screen') {
+          evidence.experimentalWorld = { screen, screenshot: await adapter!.screenshot('experimental-world.png'), scope: 'Fresh owned fixture world only' };
+          // Fixed NeoForge BackupConfirmScreen has an extra wrapped warning line;
+          // its load button is 35 GUI pixels below centre (the Fabric layout differs).
+          await adapter!.control('input.click', { x: Math.round(screen.width / 2 + 80), y: Math.round(screen.height / 2 + 35), button: 'left' });
+          return false;
+        }
+        return true;
+      }, Boolean, 180000);
+  }
+  await adapter.waitReady(240000, true);
   await waitFor('JEI runtime completion', () => readFileSync(log, 'utf8'), text => /CRAFTATLAS JEI READY session=[a-f0-9-]+ generation=\d+/.test(text), 180000);
   // This fixed JEI version persists these default files asynchronously after its runtime callback.
   // Their actual presence is a prerequisite for comparing the same persisted configuration.

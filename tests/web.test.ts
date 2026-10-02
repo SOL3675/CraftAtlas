@@ -62,6 +62,25 @@ test('local graph has a node cap across large tag alternatives and cycles', () =
   assert.equal(localGraph(model, p.id, 0, 30).truncated, true);
 });
 
+test('selected-plan cost HTTP and CLI agree on quantities, pagination and unknown input rejection', async () => {
+  const requestPlan = { schemaVersion: 1, id: 'three-diamonds', target: { resource: 'minecraft:diamond', amount: 3, unit: 'item' }, routes: { 'minecraft:diamond': { process: 'atlas:diamond', output: 0 } }, selections: { 'atlas:diamond': { '0': 'minecraft:dirt', '1': 'minecraft:stick' } }, mode: 'deterministic', probabilityModels: {}, durability: {} };
+  const server = createAtlasServer({ model: normalize(fixture()), scenario: scenario() }); server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  const address = server.address(); assert.ok(address && typeof address === 'object'); const base = `http://127.0.0.1:${address.port}`;
+  const folder = mkdtempSync(join(tmpdir(), 'atlas-cost-api-'));
+  try {
+    const url = `${base}/api/cost?${new URLSearchParams({ request: JSON.stringify(requestPlan), limit: '1' })}`;
+    const response = await fetch(url); assert.equal(response.status, 200); const http = await response.json();
+    assert.equal(http.result.status, 'complete'); assert.equal(http.result.steps.items[0].batches, 2); assert.equal(http.result.outputs.items[0].amount, 4);
+    assert.equal(http.result.materials.recurring.total, 2); assert.equal(http.result.materials.recurring.items.length, 1); assert.equal(http.result.materials.recurring.truncated, true);
+    for (const [file, value] of [['snapshot', fixture()], ['scenario', scenario()], ['request', requestPlan]] as const) writeFileSync(join(folder, file + '.json'), JSON.stringify(value));
+    const cli = spawnSync(process.execPath, ['packages/cli/src/main.ts', 'cost', '--snapshot', join(folder, 'snapshot.json'), '--scenario', join(folder, 'scenario.json'), '--request', join(folder, 'request.json'), '--limit', '1', '--json'], { encoding: 'utf8' });
+    assert.equal(cli.status, 0, cli.stderr); assert.deepEqual(JSON.parse(cli.stdout).result, http.result);
+    const invalid = { ...requestPlan, target: { ...requestPlan.target, amount: -1 } };
+    assert.equal((await fetch(`${base}/api/cost?${new URLSearchParams({ request: JSON.stringify(invalid) })}`)).status, 400);
+    assert.equal((await fetch(`${base}/api/cost?${new URLSearchParams({ request: ' '.repeat(32769) })}`)).status, 400);
+  } finally { await new Promise<void>((done, reject) => server.close(err => err ? reject(err) : done())); rmSync(folder, { recursive: true, force: true }); }
+});
+
 test('CLI JSON errors, snapshot import and SQLite queries preserve the contract', () => {
   const folder = mkdtempSync(join(tmpdir(), 'atlas-cli-')); const input = join(folder, 'snapshot.json'), db = join(folder, 'atlas.sqlite');
   writeFileSync(input, JSON.stringify(fixture()));

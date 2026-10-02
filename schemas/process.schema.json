@@ -148,6 +148,7 @@
               "equipment",
               "stage",
               "dimension",
+              "context",
               "opaque"
             ]
           },
@@ -161,7 +162,8 @@
               "type": "string",
               "minLength": 1
             }
-          }
+          },
+          "predicate": {}
         },
         "required": [
           "kind",
