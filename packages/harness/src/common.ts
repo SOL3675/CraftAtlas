@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, relative, isAbsolute } from 'node:path';
-import type { Artifact } from '../../../node_modules/mc-dev-harness/dist/core/types.js';
+import type { Artifact } from 'craft-foundry/core/types';
 import { bytesHash } from '../../core/src/hash.ts';
 export interface Case { id: string; status: 'passed' | 'failed' | 'unsupported' | 'skipped' | 'infrastructure-error'; message?: string; durationMs?: number }
 export class RequiredUnsupported extends Error {}

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.1",
+  "files": {
+    "development-loop/SKILL.md": {
+      "sha256": "379fca27884c206c12a7db7623ac21051b072a567f5aa9ba838b570523b27d10",
+      "version": "0.1.1"
+    },
+    "porting/SKILL.md": {
+      "sha256": "d6e1fa3581f061392cbda08496ee3e95cafe1894980993b55d82646a8f2be1e8",
+      "version": "0.1.1"
+    },
+    "project-setup/SKILL.md": {
+      "sha256": "51de1de3b8dfdf7b4685085fc938bc41fbc57b9ac0ba544390b871fa534e3a5c",
+      "version": "0.1.1"
+    },
+    "troubleshooting/SKILL.md": {
+      "sha256": "a843f22bbf11244f372e218514b4dd6367df56b41c25466825187933e79dab11",
+      "version": "0.1.1"
+    }
+  }
+}

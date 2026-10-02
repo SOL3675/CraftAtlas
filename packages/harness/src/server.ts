@@ -2,8 +2,8 @@ import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node
 import { resolve, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-import { loadConfig } from '../../../node_modules/mc-dev-harness/dist/core/config.js';
-import { OwnedServer } from '../../../node_modules/mc-dev-harness/dist/adapters/runtime/server.js';
+import { loadConfig } from 'craft-foundry/core/config';
+import { OwnedServer } from 'craft-foundry/adapters/runtime/server';
 import { normalize } from '../../core/src/normalize.ts';
 import { readSnapshot } from '../../core/src/snapshot.ts';
 import { buildDatabase } from '../../core/src/db.ts';

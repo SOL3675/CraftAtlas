@@ -7,10 +7,10 @@ Minecraft 1.21.1 / Fabric Loader 0.16.14 / Fabric API 0.116.17+1.21.1 を独立�
 ```powershell
 pnpm install --frozen-lockfile
 node scripts/fetch-fabric-pack.ts
-node node_modules/mc-dev-harness/dist/cli/main.js doctor --target fabric-1.21.1 --json
-node node_modules/mc-dev-harness/dist/cli/main.js inspect --target fabric-1.21.1 --json
-node node_modules/mc-dev-harness/dist/cli/main.js test --target fabric-1.21.1 --suite atlas-fabric-server --json
-node node_modules/mc-dev-harness/dist/cli/main.js test --target fabric-1.21.1 --suite atlas-fabric-client --json
+node node_modules/craft-foundry/dist/cli/main.js doctor --json
+node node_modules/craft-foundry/dist/cli/main.js inspect --target fabric-1.21.1 --json
+node node_modules/craft-foundry/dist/cli/main.js test --target fabric-1.21.1 --suite atlas-fabric-server --json
+node node_modules/craft-foundry/dist/cli/main.js test --target fabric-1.21.1 --suite atlas-fabric-client --json
 ```
 
 Java の絶対パスと `mc-pilot` backend を `harness.local.json` に設定する。ゲーム起動には利用者が Minecraft EULA を承諾した設定が必要。以前に明示的に承諾された設定は再利用できる。各実行は新規の所有セッション・ループバックの予約済みポートを使う。

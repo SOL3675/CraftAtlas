@@ -1,4 +1,6 @@
-# Craft Atlas
+# CraftAtlas
+
+CraftFoundry の npm パッケージ `craft-foundry` をローカル tarball から利用します。構成・ハーネス更新・将来の private repository / サブモジュール化は [開発構成](docs/development.md) を参照してください。
 
 Minecraft Java の実行時レシピ・タグを保存し、ゲーム終了後も取得経路、変更差分、期待条件を調べるローカルツールです。Java の収集 Mod と、TypeScript の正規化・SQLite・CLI・Web UI を分離しています。
 

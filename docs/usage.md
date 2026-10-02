@@ -99,10 +99,10 @@ JEI を導入した統合サーバーでは、JEI runtime の準備完了後に 
 
 `eulaAccepted: true` は利用者が Minecraft EULA に既に明示的に同意した場合だけ設定します。他の利用者やマシンの同意状態をコピーして同意したことにしません。上の例の `false` のままでは EULA 必須 Suite は実行されません。Java home は `bin/java` を含むインストールルートを指定します。固定ツールは lock の SHA-256 と一致する必要があります。
 
-クライアント Suite には固定した mc-pilot backend と NeoForge helper も必要です。導入済みハーネスの [設定契約](../node_modules/mc-dev-harness/docs/configuration.md) と [ツール導入](../node_modules/mc-dev-harness/docs/tools.md) を確認します。backend を新規導入するコマンドは次のとおりです。
+クライアント Suite には固定した mc-pilot backend と NeoForge helper も必要です。導入済みハーネスの [設定契約](../node_modules/craft-foundry/docs/configuration.md) と [ツール導入](../node_modules/craft-foundry/docs/tools.md) を確認します。backend を新規導入するコマンドは次のとおりです。
 
 ```powershell
-node node_modules/mc-dev-harness/dist/cli/main.js tools install mc-pilot --project .
+node node_modules/craft-foundry/dist/cli/main.js tools install mc-pilot --project .
 ```
 
 このハーネス版の backend installer は内部で `npm ci` を使います。npm が PATH にない場合は `--npm-command` に npm 実行ファイルの絶対パスを指定するか、管理メタデータと固定ハッシュを検証できる導入済み backend を再利用します。プロジェクト本体の依存管理は pnpm です。
@@ -110,14 +110,14 @@ node node_modules/mc-dev-harness/dist/cli/main.js tools install mc-pilot --proje
 installer は `harness.local.json` を編集しません。返された `backendRoot` を `backends.mc-pilot` に設定してください。NeoForge helper は lock の固定バイトを自動取得できます。取得済みのものを使う場合は `tools.mct-helper-neoforge-1.21.1` にその絶対パスを設定します。必要なら `assetCaches["1.21.1"]` に検証済みの `assets/objects` を設定できます。未指定ではクライアントが必要な資源を取得します。client wrapper は今回の隔離セッションで生成したワールドを開き、配布 JAR・JEI・Pack・helper をハッシュで確認して起動します。
 
 ```powershell
-node node_modules/mc-dev-harness/dist/cli/main.js targets --json
-node node_modules/mc-dev-harness/dist/cli/main.js doctor --json
-node node_modules/mc-dev-harness/dist/cli/main.js inspect --target neoforge-1.21.1 --json
-node node_modules/mc-dev-harness/dist/cli/main.js build --target neoforge-1.21.1 --json
-node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-offline --json
-node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-server --json
-node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-client --json
-node node_modules/mc-dev-harness/dist/cli/main.js test --all --profile release --json
+node node_modules/craft-foundry/dist/cli/main.js targets --json
+node node_modules/craft-foundry/dist/cli/main.js doctor --json
+node node_modules/craft-foundry/dist/cli/main.js inspect --target neoforge-1.21.1 --json
+node node_modules/craft-foundry/dist/cli/main.js build --target neoforge-1.21.1 --json
+node node_modules/craft-foundry/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-offline --json
+node node_modules/craft-foundry/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-server --json
+node node_modules/craft-foundry/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-client --json
+node node_modules/craft-foundry/dist/cli/main.js test --all --profile release --json
 ```
 
 release は NeoForge の `atlas-server`、`atlas-client`、`atlas-offline`、`atlas-world` と、Fabric の `atlas-fabric-server`、`atlas-fabric-client`、`atlas-offline` をすべて評価します。クライアントの準備がない環境でサーバーの成功だけを release の成功とは扱いません。結果・取得原本・配布成果物・ログ・診断・差分は `.harness/runs/<run-id>/` に保存します。
@@ -125,8 +125,8 @@ release は NeoForge の `atlas-server`、`atlas-client`、`atlas-offline`、`at
 意図的な不合格を確認する `atlas-negative` は release の必須 Suite から分離しています。
 
 ```powershell
-node node_modules/mc-dev-harness/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-negative --json
-node node_modules/mc-dev-harness/dist/cli/main.js report --run <run-id> --json
+node node_modules/craft-foundry/dist/cli/main.js test --target neoforge-1.21.1 --suite atlas-negative --json
+node node_modules/craft-foundry/dist/cli/main.js report --run <run-id> --json
 ```
 
 `atlas-negative` は実ゲームの必須レシピ / タグ不足を `failed` として出力し、ハーネスの実行結果も不合格になることを期待します。一方、通常の `atlas-server` の `atlas.failure-fixture` は、変更後の実ゲームで違反を検出できたことをテストして `passed` と記録します。
