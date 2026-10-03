@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "minecraft": "1.21.1",
+  "loader": "fabric",
+  "loaderVersion": "0.16.14",
+  "mods": [
+    {
+      "id": "fabric-api",
+      "version": "0.116.17+1.21.1",
+      "filename": "fabric-api-0.116.17+1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/Mys3P7lK/fabric-api-0.116.17%2B1.21.1.jar",
+      "sha256": "79ac44b40780acbd884b34c50be1e39af682847e5f5cb3b1fddeeaa768dce800",
+      "sha512": "98c478217da19181f0e4df3ea6c2da6bdbda271c7544a4aea048513a49b444f1ff5b71dc0df6303017c48e8ff69b7bb6af6179bdf0d0e09ab3c1ee08411857a8",
+      "side": "both",
+      "dependencies": []
+    },
+    {
+      "id": "emi",
+      "version": "1.1.24+1.21.1+fabric",
+      "filename": "emi-1.1.24+1.21.1+fabric.jar",
+      "url": "https://cdn.modrinth.com/data/fRiHVvU7/versions/on5GT1qh/emi-1.1.24%2B1.21.1%2Bfabric.jar",
+      "sha256": "56ecd418e988cba23dd653d498309fd7b886265708253d5ca7a8fb621dcc5db4",
+      "sha512": "2680e7b0a93152d4220afdc30a0452c911dc4b5c9ce1db1b7246c21b777bc2a1945fe97c98c09941d31b7478ae357135a1ef51cd3ba92d08dce35202a830b70d",
+      "side": "client",
+      "dependencies": []
+    },
+    {
+      "id": "techreborn",
+      "version": "5.11.19",
+      "filename": "TechReborn-5.11.19.jar",
+      "url": "https://cdn.modrinth.com/data/3eMENr4V/versions/CNwZZ4FD/TechReborn-5.11.19.jar",
+      "sha256": "bf65a8c52037ccd0b39dd9aa06209e28d774ab876e4381bcbb0ae8289a706e55",
+      "sha512": "7afde34c9769c7ccb053e8666833ead92cee615655fa187f5301eceac8b56f4d8602340afd2983c2f403ff6b1105f5bc639163b134e11eb64e25c331a224c7cd",
+      "side": "both",
+      "dependencies": [
+        {
+          "version_id": null,
+          "project_id": "P7dR8mSH",
+          "file_name": null,
+          "dependency_type": "required"
+        },
+        {
+          "version_id": null,
+          "project_id": "3NCrJdj3",
+          "file_name": null,
+          "dependency_type": "required"
+        }
+      ]
+    },
+    {
+      "id": "reborncore",
+      "version": "5.11.19",
+      "filename": "RebornCore-5.11.19.jar",
+      "url": "https://cdn.modrinth.com/data/3NCrJdj3/versions/QtkC5plA/RebornCore-5.11.19.jar",
+      "sha256": "b75999a83510caa9566fbd5fc1735d870ccf5dc9e62d43fed86d75014eb1075b",
+      "sha512": "c2495cff8f8f0cb3d9e1841d116f1b3171db5b92223947c7b30c43ba4fa95617b935ea7fe6c97c9a9e1df9ef122d7c3c89d524d445ce086d92fe70680a0dcacb",
+      "side": "both",
+      "dependencies": []
+    }
+  ]
+}

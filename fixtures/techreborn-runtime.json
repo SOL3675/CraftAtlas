@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "minecraft": "1.21.1",
+    "loader": "fabric",
+    "mods": [
+      {
+        "id": "reborncore",
+        "version": "5.11.19"
+      },
+      {
+        "id": "techreborn",
+        "version": "5.11.19"
+      }
+    ],
+    "run": "2026-10-01T22-22-53-826Z-e0fbc799",
+    "snapshot": "5b66f9ec126db3d0d95b95c6",
+    "artifactSha256": "bf65a8c52037ccd0b39dd9aa06209e28d774ab876e4381bcbb0ae8289a706e55"
+  },
+  "recipe": {
+    "data": {
+      "ingredients": [
+        {
+          "item": "minecraft:andesite"
+        }
+      ],
+      "outputs": [
+        {
+          "count": 2,
+          "id": "techreborn:andesite_dust"
+        }
+      ],
+      "power": 4,
+      "time": 270,
+      "type": "techreborn:grinder"
+    },
+    "id": "techreborn:grinder/andesite_dust",
+    "type": "techreborn:grinder"
+  }
+}

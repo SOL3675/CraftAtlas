@@ -1,0 +1,51 @@
+plugins { id 'java-library'; id 'net.neoforged.moddev' version '2.0.148' }
+version = project.mod_version
+group = 'dev.craftatlas'
+base { archivesName = 'craft-atlas-collector' }
+repositories { mavenCentral(); maven { url = 'https://maven.blamejared.com' } }
+java { toolchain.languageVersion = JavaLanguageVersion.of(21); withSourcesJar() }
+tasks.withType(JavaCompile).configureEach { options.release = 21; options.encoding = 'UTF-8' }
+tasks.withType(AbstractArchiveTask).configureEach { preserveFileTimestamps = false; reproducibleFileOrder = true }
+tasks.withType(Jar).configureEach { from('../../LICENSE') { into 'META-INF' } }
+neoForge {
+    version = project.neo_version
+    runs {
+        client { client() }
+        server { server(); programArgument '--nogui' }
+    }
+    mods { craftatlas { sourceSet sourceSets.main } }
+}
+dependencies {
+    compileOnly 'mezz.jei:jei-1.21.1-neoforge-api:19.22.1.316'
+}
+def packLock = new groovy.json.JsonSlurper().parse(file('../../fixtures/pack.lock.json'))
+tasks.register('copyRuntimeDependencies') {
+    doLast {
+        packLock.mods.each { mod ->
+            def input = file('../../.harness/pack/' + mod.filename)
+            if (!input.isFile()) throw new GradleException('Missing fixed pack dependency; run node scripts/fetch-pack.ts: ' + mod.filename)
+            def digest = java.security.MessageDigest.getInstance('SHA-256').digest(input.bytes).encodeHex().toString()
+            if (digest != mod.sha256) throw new GradleException('Pack dependency hash mismatch: ' + mod.filename)
+            copy { from input; into layout.buildDirectory.dir('pack') }
+        }
+    }
+}
+processResources { inputs.property 'version', project.version; filesMatching('META-INF/neoforge.mods.toml') { expand version: project.version } }
+ext.harnessExportSpec = [
+    target: 'neoforge-1.21.1', loader: 'neoforge', java: 21, declaredMinecraft: project.minecraft_version,
+    artifactTasks: ['jar', 'copyRuntimeDependencies'],
+    resolved: {
+        def resolvedModule = { name ->
+            def component = configurations.compileClasspath.incoming.resolutionResult.allComponents.find {
+                it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier && it.id.group == 'net.neoforged' && it.id.module == name
+            }
+            if (component == null) throw new GradleException("Cannot resolve ${name}")
+            component.id.version
+        }
+        def mc = resolvedModule('minecraft-dependencies')
+        [minecraft: mc, loaderVersion: resolvedModule('neoforge'), mappings: 'mojang:' + mc]
+    },
+    artifacts: { [[file: tasks.jar.archiveFile.get().asFile, kind: 'distribution', side: 'both']] + packLock.mods.collect { [file: layout.buildDirectory.file('pack/' + it.filename).get().asFile, kind: 'runtime-dependency', side: it.side] } },
+    classpath: { sourceSets.main.compileClasspath.files }, sources: ['src/main/java']
+]
+apply from: 'gradle/harness-export.gradle'

@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://craft-atlas.local/schemas/cost-request",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000000000
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "resource",
+        "amount",
+        "unit"
+      ]
+    },
+    "routes": {
+      "type": "object",
+      "maxProperties": 1000,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "process": {
+            "type": "string",
+            "minLength": 1
+          },
+          "output": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "process",
+          "output"
+        ]
+      }
+    },
+    "selections": {
+      "type": "object",
+      "maxProperties": 1000,
+      "additionalProperties": {
+        "type": "object",
+        "maxProperties": 1000,
+        "additionalProperties": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "mode": {
+      "enum": [
+        "deterministic",
+        "expectation"
+      ]
+    },
+    "probabilityModels": {
+      "type": "object",
+      "maxProperties": 1000,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "iid-bernoulli"
+          },
+          "independentOutputs": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "independentOutputs"
+        ]
+      }
+    },
+    "durability": {
+      "type": "object",
+      "maxProperties": 1000,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "remaining": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000000
+          },
+          "lifetime": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000000000
+          }
+        },
+        "required": [
+          "remaining",
+          "lifetime"
+        ]
+      }
+    },
+    "inventoryUnits": {
+      "type": "object",
+      "maxProperties": 1000,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "target",
+    "routes",
+    "selections",
+    "mode",
+    "probabilityModels",
+    "durability"
+  ]
+}

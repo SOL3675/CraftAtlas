@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "minecraft": "1.21.1",
+  "loader": "neoforge",
+  "loaderVersion": "21.1.252",
+  "mods": [
+    {
+      "id": "mekanism",
+      "version": "10.7.14.79",
+      "filename": "Mekanism-1.21.1-10.7.14.79.jar",
+      "url": "https://cdn.modrinth.com/data/Ce6I4WUE/versions/nWsUKZBo/Mekanism-1.21.1-10.7.14.79.jar",
+      "sha256": "318a88d8c60cfb5eaa32390222320fc062ffe512881d3c65298f4ee2253af9be",
+      "side": "both",
+      "dependencies": [
+        {
+          "version_id": null,
+          "project_id": "Xg35A4rS",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "gu7yAYhd",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "NTi7d3Xc",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "bcOsQHnC",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "Eyw0UxEx",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "fRiHVvU7",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "qXkLFB0L",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "R2OftAxM",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "6AQIaxuO",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "EiEOyeoL",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "XxWD5pD3",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "nvQzSEkH",
+          "file_name": null,
+          "dependency_type": "optional"
+        },
+        {
+          "version_id": null,
+          "project_id": "u6dRKJwZ",
+          "file_name": null,
+          "dependency_type": "optional"
+        }
+      ]
+    },
+    {
+      "id": "crafttweaker",
+      "version": "21.0.38",
+      "filename": "CraftTweaker-neoforge-1.21.1-21.0.38.jar",
+      "url": "https://cdn.modrinth.com/data/Xg35A4rS/versions/BVOSHJwc/CraftTweaker-neoforge-1.21.1-21.0.38.jar",
+      "sha256": "4c4a95ca706e1aec41145b2db32737f2aebf1fdedefda0b35b651cad3fa4abaf",
+      "side": "both",
+      "dependencies": []
+    },
+    {
+      "id": "jei",
+      "version": "19.22.1.316",
+      "filename": "jei-1.21.1-neoforge-19.22.1.316.jar",
+      "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/oghFmDkL/jei-1.21.1-neoforge-19.22.1.316.jar",
+      "sha256": "ef13d6d38e394c13520475dfd6df1aa74a0c7c76f6e253acc7d1d425bcbcf6d9",
+      "side": "client",
+      "dependencies": []
+    }
+  ]
+}

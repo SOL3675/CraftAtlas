@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "tools": {
+    "mct-helper-neoforge-1.21.1": {
+      "version": "0.14.0-artifact-mod.0.9.1",
+      "sha256": "d89bd309af94c0afe6b37dc03f8e9a689b4dabf95ff53f3f04fc7df9a7587788",
+      "url": "https://github.com/kzheart/mc-pilot/releases/download/v0.14.0/mct-client-mod-neoforge-1.21.1.jar"
+    },
+    "neoforge-server-1.21.1": {
+      "version": "21.1.252",
+      "sha256": "d0345e2a104ce4633065f572310ba6e0dd428bb6a73364cf0c2443ed9f8950ad",
+      "url": "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.252/neoforge-21.1.252-installer.jar"
+    },
+    "mc-pilot": {
+      "version": "0.15.0",
+      "sha256": "369ea25fb7a563c97e8b9c1daed01411193579b78a838f5e774900cef8775629",
+      "url": "https://registry.npmjs.org/@kzheart_/mc-pilot/-/mc-pilot-0.15.0.tgz"
+    },
+    "fabric-server-1.21.1": {
+      "version": "1.21.1-loader.0.16.14-launcher.1.0.3",
+      "sha256": "44f3e6cfbefce7bc8761c3b45293d99edf2677ed947021a5ca6481907430c5aa",
+      "url": "https://meta.fabricmc.net/v2/versions/loader/1.21.1/0.16.14/1.0.3/server/jar"
+    },
+    "mct-helper-fabric-1.21.1": {
+      "version": "0.14.0-artifact-mod.0.9.1",
+      "sha256": "1242ef239b837222fd4eee6f7d957e0e749bde9d47875d62eba14365df5cb749",
+      "url": "https://github.com/kzheart/mc-pilot/releases/download/v0.14.0/mct-client-mod-fabric-1.21.1.jar"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-start",
+  "inventory": {
+    "minecraft:dirt": 8,
+    "minecraft:stick": 8
+  },
+  "equipment": [],
+  "stages": [],
+  "dimensions": [
+    "minecraft:overworld"
+  ],
+  "forbiddenProcesses": [],
+  "allowedTypes": null,
+  "supply": "renewable",
+  "closed": false,
+  "closedResources": [],
+  "gameRules": {}
+}

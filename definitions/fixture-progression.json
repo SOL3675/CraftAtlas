@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1, "id": "atlas-fixture-progression", "version": "2.0.0", "priority": 10,
+  "targets": { "minecraft": "1.21.1", "loader": "neoforge", "mods": [{ "id": "atlas_fixture", "versions": ["2"] }] },
+  "verified": ["Synthetic offline contract only; no real Mod compatibility or in-game structure validator claimed", "Placement, drawing and summoning predicates require explicitly supplied context"],
+  "operations": [],
+  "additions": [
+    {
+      "id": "atlas_fixture:build_gate_frame", "sourceId": "atlas_fixture:build_gate_frame", "type": "atlas_fixture:multiblock",
+      "inputs": [{ "alternatives": [{ "tag": "atlas_fixture:frame_materials", "members": ["atlas_fixture:stone", "atlas_fixture:reinforced_stone"] }], "amount": 8, "unit": "item", "consumption": "consumed", "evidence": [] }],
+      "outputs": [{ "resource": "atlas_fixture:installed_gate_frame", "amount": 1, "unit": "capability", "role": "primary", "probability": 1, "evidence": [] }],
+      "requirements": [{ "kind": "dimension", "id": "minecraft:overworld", "evidence": [] }, { "kind": "context", "id": "gate_multiblock_valid", "predicate": true, "evidence": [] }],
+      "evidence": [], "interpretation": "supported", "execution": "executable", "enabled": true, "unknown": [],
+      "costs": [{ "kind": "time", "amount": 40, "unit": "tick", "basis": "synthetic fixture constant" }],
+      "raw": { "fixture": true, "structure": { "rows": ["SSS", "S S", "SSS"], "S": "selected frame material" }, "operation": "place then activate; supplied predicate confirms arrangement" }, "fieldEvidence": {}, "conflicts": []
+    },
+    {
+      "id": "atlas_fixture:draw_circle", "sourceId": "atlas_fixture:draw_circle", "type": "atlas_fixture:magic_circle",
+      "inputs": [{ "alternatives": [{ "resource": "atlas_fixture:stone" }], "amount": 4, "unit": "item", "consumption": "consumed", "evidence": [] }, { "alternatives": [{ "resource": "atlas_fixture:chalk" }], "amount": 1, "unit": "durability", "consumption": "durability", "evidence": [] }],
+      "outputs": [{ "resource": "atlas_fixture:installed_circle", "amount": 1, "unit": "capability", "role": "primary", "probability": 1, "evidence": [] }],
+      "requirements": [{ "kind": "dimension", "id": "minecraft:overworld", "evidence": [] }, { "kind": "context", "id": "circle_drawing_valid", "predicate": true, "evidence": [] }],
+      "evidence": [], "interpretation": "supported", "execution": "executable", "enabled": true, "unknown": [],
+      "costs": [{ "kind": "time", "amount": 10, "unit": "tick", "basis": "synthetic fixture constant" }],
+      "raw": { "fixture": true, "operation": "arrange floor then draw with chalk", "persistence": "circle stays installed after research and summoning" }, "fieldEvidence": {}, "conflicts": []
+    },
+    {
+      "id": "atlas_fixture:research_gate", "sourceId": "atlas_fixture:research_gate", "type": "atlas_fixture:research",
+      "inputs": [{ "alternatives": [{ "resource": "atlas_fixture:research_notes" }], "amount": 1, "unit": "item", "consumption": "consumed", "evidence": [] }],
+      "outputs": [{ "resource": "atlas_fixture:gate_researched", "amount": 1, "unit": "capability", "role": "primary", "probability": 1, "evidence": [] }],
+      "requirements": [{ "kind": "equipment", "id": "atlas_fixture:installed_circle", "evidence": [] }],
+      "evidence": [], "interpretation": "supported", "execution": "executable", "enabled": true, "unknown": [],
+      "costs": [{ "kind": "time", "amount": 20, "unit": "tick", "basis": "synthetic fixture constant" }],
+      "raw": { "fixture": true, "operation": "unlock a persistent research stage" }, "fieldEvidence": {}, "conflicts": []
+    },
+    {
+      "id": "atlas_fixture:open_realm", "sourceId": "atlas_fixture:open_realm", "type": "atlas_fixture:dimension_unlock",
+      "inputs": [{ "alternatives": [{ "resource": "atlas_fixture:gate_core" }], "amount": 1, "unit": "item", "consumption": "consumed", "evidence": [] }],
+      "outputs": [{ "resource": "atlas_fixture:realm", "amount": 1, "unit": "capability", "role": "primary", "probability": 1, "evidence": [] }],
+      "requirements": [{ "kind": "equipment", "id": "atlas_fixture:installed_gate_frame", "evidence": [] }, { "kind": "stage", "id": "atlas_fixture:gate_researched", "evidence": [] }],
+      "evidence": [], "interpretation": "supported", "execution": "executable", "enabled": true, "unknown": [],
+      "costs": [{ "kind": "time", "amount": 5, "unit": "tick", "basis": "synthetic fixture constant" }],
+      "raw": { "fixture": true, "operation": "activate the researched frame to make realm access available", "limitation": "access does not itself prove world generation or resource availability" }, "fieldEvidence": {}, "conflicts": []
+    },
+    {
+      "id": "atlas_fixture:summon_wisp", "sourceId": "atlas_fixture:summon_wisp", "type": "atlas_fixture:summoning",
+      "inputs": [{ "alternatives": [{ "resource": "atlas_fixture:reagent" }], "amount": 3, "unit": "item", "consumption": "consumed", "evidence": [] }, { "alternatives": [{ "resource": "atlas_fixture:filled_vial" }], "amount": 1, "unit": "item", "consumption": "consumed", "evidence": [] }],
+      "outputs": [{ "resource": "atlas_fixture:wisp", "amount": 1, "unit": "entity", "role": "primary", "probability": 1, "evidence": [] }, { "resource": "atlas_fixture:empty_vial", "amount": 1, "unit": "item", "role": "returned", "probability": 1, "evidence": [] }],
+      "requirements": [{ "kind": "equipment", "id": "atlas_fixture:installed_circle", "evidence": [] }, { "kind": "stage", "id": "atlas_fixture:gate_researched", "evidence": [] }, { "kind": "dimension", "id": "atlas_fixture:realm", "evidence": [] }, { "kind": "context", "id": "summoning_context_valid", "predicate": true, "evidence": [] }],
+      "evidence": [], "interpretation": "supported", "execution": "executable", "enabled": true, "unknown": [],
+      "costs": [{ "kind": "time", "amount": 10, "unit": "tick", "basis": "synthetic fixture constant" }, { "kind": "energy", "amount": 3, "unit": "J", "basis": "synthetic fixture constant; operational supply declared by context" }],
+      "raw": { "fixture": true, "operation": "repeat a reagent ritual in the unlocked realm", "limitation": "not evidence of natural spawning or an actual Mod ritual" }, "fieldEvidence": {}, "conflicts": []
+    },
+    {
+      "id": "atlas_fixture:harvest_wisp", "sourceId": "atlas_fixture:harvest_wisp", "type": "atlas_fixture:drop",
+      "inputs": [{ "alternatives": [{ "resource": "atlas_fixture:wisp" }], "amount": 1, "unit": "entity", "consumption": "consumed", "evidence": [] }, { "alternatives": [{ "resource": "atlas_fixture:focus" }], "amount": 1, "unit": "item", "consumption": "catalyst", "evidence": [] }],
+      "outputs": [{ "resource": "atlas_fixture:gem", "amount": 1, "unit": "item", "role": "primary", "probability": 0.25, "evidence": [] }, { "resource": "atlas_fixture:dust", "amount": 1, "unit": "item", "role": "byproduct", "probability": 0.5, "evidence": [] }],
+      "requirements": [{ "kind": "context", "id": "harvest_context_valid", "predicate": true, "evidence": [] }],
+      "evidence": [], "interpretation": "supported", "execution": "executable", "enabled": true, "unknown": [],
+      "costs": [{ "kind": "time", "amount": 2, "unit": "tick", "basis": "synthetic fixture constant" }, { "kind": "energy", "amount": 2, "unit": "J", "basis": "synthetic fixture constant; operational supply declared by context" }],
+      "raw": { "fixture": true, "operation": "conditional drop in the declared fixture context", "probability": "request must explicitly declare an IID model for expectation calculations" }, "fieldEvidence": {}, "conflicts": []
+    }
+  ]
+}

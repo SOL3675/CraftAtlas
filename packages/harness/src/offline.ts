@@ -1,0 +1,10 @@
+import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const session = resolve(process.argv[2]), root = process.env.MCH_PROJECT_ROOT ?? process.cwd();
+mkdirSync(session, { recursive: true });
+const child = spawn(process.execPath, ['--test', 'tests/*.test.ts'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+let output = ''; child.stdout.on('data', b => { output += b; process.stderr.write(b); }); child.stderr.on('data', b => { output += b; process.stderr.write(b); });
+const code = await new Promise<number | null>((accept, reject) => { child.on('error', reject); child.on('exit', accept); });
+writeFileSync(resolve(session, 'tests.log'), output);
+writeFileSync(resolve(session, 'results.json'), JSON.stringify({ schemaVersion: 1, cases: [{ id: 'atlas.contracts', status: code === 0 && /(?:tests\s+[1-9]|ℹ tests [1-9])/.test(output) ? 'passed' : 'failed', message: `Node test exit ${code}; see tests.log` }] }));

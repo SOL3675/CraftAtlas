@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "techreborn-machine-context",
+  "version": "1.0.0",
+  "priority": 10,
+  "targets": {
+    "minecraft": "1.21.1",
+    "loader": "fabric",
+    "mods": [
+      {
+        "id": "techreborn",
+        "versions": [
+          "5.11.19"
+        ]
+      },
+      {
+        "id": "reborncore",
+        "versions": [
+          "5.11.19"
+        ]
+      }
+    ]
+  },
+  "verified": [
+    "Pinned RebornCore-5.11.19.jar RecipeCrafter.checkRecipe/outputSlots bytecode; artifact sha256 b75999a83510caa9566fbd5fc1735d870ccf5dc9e62d43fed86d75014eb1075b"
+  ],
+  "operations": [
+    {
+      "id": "output-capacity",
+      "selector": {
+        "type": "techreborn:grinder"
+      },
+      "action": "append",
+      "patch": {
+        "requirements": [
+          {
+            "kind": "opaque",
+            "id": "TechReborn grinder output inventory capacity and configured slot access are unacquired",
+            "evidence": []
+          }
+        ]
+      },
+      "evidence": "RebornCore5.11.19 reborncore.common.recipes.RecipeCrafter.checkRecipe/outputSlots; https://github.com/TechReborn/RebornCore",
+      "override": []
+    }
+  ],
+  "additions": []
+}

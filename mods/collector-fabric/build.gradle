@@ -1,0 +1,51 @@
+plugins { id 'fabric-loom' version '1.8.13'; id 'java-library' }
+version = project.mod_version
+group = 'dev.craftatlas'
+base { archivesName = 'craft-atlas-collector-fabric' }
+repositories { mavenCentral(); maven { url = 'https://maven.terraformersmc.com/releases/' } }
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    modCompileOnly 'dev.emi:emi-fabric:1.1.24+1.21.1'
+}
+java { toolchain.languageVersion = JavaLanguageVersion.of(21); withSourcesJar() }
+tasks.withType(JavaCompile).configureEach { options.release = 21; options.encoding = 'UTF-8' }
+tasks.withType(AbstractArchiveTask).configureEach { preserveFileTimestamps = false; reproducibleFileOrder = true }
+tasks.withType(Jar).configureEach { from('../../LICENSE') { into 'META-INF' } }
+processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
+tasks.register('copySharedSources', Copy) {
+    from('../collector/src/main/java') { include 'dev/craftatlas/JsonFiles.java', 'dev/craftatlas/WorldCollector.java', 'dev/craftatlas/WorldObservations.java' }
+    into layout.buildDirectory.dir('shared/java')
+}
+sourceSets.main.java.srcDir(layout.buildDirectory.dir('shared/java'))
+tasks.named('compileJava') { dependsOn 'copySharedSources' }
+def packLock = new groovy.json.JsonSlurper().parse(file('../../fixtures/pack-fabric.lock.json'))
+tasks.register('copyRuntimeDependencies') {
+    doLast {
+        packLock.mods.each { mod ->
+            def input = file('../../.harness/pack-fabric/' + mod.filename)
+            if (!input.isFile()) throw new GradleException('Missing fixed Fabric dependency; run node scripts/fetch-fabric-pack.ts: ' + mod.filename)
+            def digest = java.security.MessageDigest.getInstance('SHA-256').digest(input.bytes).encodeHex().toString()
+            if (digest != mod.sha256) throw new GradleException('Fabric dependency checksum mismatch: ' + mod.filename)
+            copy { from input; into layout.buildDirectory.dir('pack') }
+        }
+    }
+}
+ext.harnessExportSpec = [
+    target: 'fabric-1.21.1', loader: 'fabric', java: 21, declaredMinecraft: project.minecraft_version,
+    artifactTasks: ['remapJar', 'copyRuntimeDependencies', 'copySharedSources'],
+    resolved: {
+        def dependency = configurations.modImplementation.incoming.resolutionResult.allComponents.find {
+            it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier && it.id.group == 'net.fabricmc' && it.id.module == 'fabric-loader'
+        }
+        if (dependency == null) throw new GradleException('Cannot resolve Fabric Loader')
+        [minecraft: loom.minecraftProvider.minecraftVersion(), loaderVersion: dependency.id.version, mappings: 'mojang:' + loom.minecraftProvider.minecraftVersion()]
+    },
+    artifacts: { [[file: tasks.remapJar.archiveFile.get().asFile, kind: 'distribution', side: 'both']] + packLock.mods.collect { [file: layout.buildDirectory.file('pack/' + it.filename).get().asFile, kind: 'runtime-dependency', side: it.side] } },
+    classpath: { sourceSets.main.compileClasspath.files }, sources: ['src/main/java', 'build/shared/java']
+]
+apply from: 'gradle/harness-export.gradle'
+
+tasks.named("sourcesJar") { dependsOn tasks.named("copySharedSources") }

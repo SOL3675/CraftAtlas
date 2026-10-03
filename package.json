@@ -1,5 +1,27 @@
 {
+  "name": "craft-atlas",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-build-assets.ts",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test tests/*.test.ts",
+    "atlas": "node packages/cli/src/main.ts",
+    "fixture": "node scripts/make-fixtures.ts",
+    "prepare:foundry": "node scripts/prepare-foundry.mjs"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
+  },
   "devDependencies": {
-    "mc-dev-harness": "file:mc-dev-harness-0.1.0.tgz"
+    "@types/node": "24.3.0",
+    "typescript": "5.9.2",
+    "craft-foundry": "file:.harness/vendor/craft-foundry.tgz"
   }
 }

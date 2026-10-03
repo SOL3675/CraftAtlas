@@ -1,7 +1,19 @@
-# mc-dev-harness
+# craft-foundry
 .agents/skills/development-loop
 .agents/skills/porting
 .agents/skills/project-setup
 .agents/skills/troubleshooting
 .harness/
 node_modules/
+build/
+dist/
+.gradle/
+harness.local.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+mods/collector/run/
+
+# Generated local packages and package-manager caches
+*.tgz
+.pnpm-store/

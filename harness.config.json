@@ -1,0 +1,273 @@
+{
+  "targets": {
+    "neoforge-1.21.1": {
+      "java": {
+        "gradle": "java21",
+        "toolchain": 21,
+        "game": "java21"
+      },
+      "build": "collector",
+      "requiredSuites": [
+        "atlas-server",
+        "atlas-client",
+        "atlas-offline",
+        "atlas-world"
+      ],
+      "tasks": {
+        "build": [
+          "build"
+        ],
+        "inspect": [
+          "harnessExport"
+        ]
+      },
+      "artifactManifest": "build/harness/neoforge-1.21.1.json",
+      "minecraft": "1.21.1",
+      "loader": "neoforge",
+      "loaderVersion": "21.1.252"
+    },
+    "fabric-1.21.1": {
+      "java": {
+        "gradle": "java21",
+        "toolchain": 21,
+        "game": "java21"
+      },
+      "build": "collector-fabric",
+      "requiredSuites": [
+        "atlas-fabric-server",
+        "atlas-fabric-client",
+        "atlas-offline"
+      ],
+      "tasks": {
+        "build": [
+          "build"
+        ],
+        "inspect": [
+          "harnessExport"
+        ]
+      },
+      "artifactManifest": "build/harness/fabric-1.21.1.json",
+      "minecraft": "1.21.1",
+      "loader": "fabric",
+      "loaderVersion": "0.16.14"
+    }
+  },
+  "builds": {
+    "collector": {
+      "adapter": "gradle",
+      "root": "mods/collector",
+      "java": "java21"
+    },
+    "collector-fabric": {
+      "adapter": "gradle",
+      "root": "mods/collector-fabric",
+      "java": "java21"
+    }
+  },
+  "projectId": "craft-atlas",
+  "runtimes": {
+    "atlas-offline": {
+      "kind": "server",
+      "command": {
+        "args": [
+          "{projectRoot}/packages/harness/src/offline.ts",
+          "{sessionRoot}"
+        ],
+        "executable": "node"
+      },
+      "capabilities": [
+        "test-results"
+      ]
+    },
+    "atlas-server": {
+      "kind": "server",
+      "command": {
+        "args": [
+          "{projectRoot}/packages/harness/src/server.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ],
+        "executable": "node"
+      },
+      "capabilities": [
+        "dedicated-server"
+      ]
+    },
+    "atlas-client": {
+      "capabilities": [
+        "integrated-server",
+        "jei-runtime"
+      ],
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/client.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      },
+      "kind": "client"
+    },
+    "atlas-negative": {
+      "capabilities": [
+        "dedicated-server"
+      ],
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/server.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}",
+          "--negative"
+        ]
+      },
+      "kind": "server"
+    },
+    "atlas-fabric-server": {
+      "kind": "server",
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/fabric-server.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      },
+      "capabilities": [
+        "dedicated-server"
+      ]
+    },
+    "atlas-fabric-client": {
+      "kind": "client",
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/fabric-client.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      },
+      "capabilities": [
+        "integrated-server",
+        "emi-runtime"
+      ]
+    },
+    "atlas-world": {
+      "kind": "server",
+      "capabilities": [
+        "dedicated-server",
+        "world-observation"
+      ],
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/world.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "suites": {
+    "atlas-server": {
+      "runtime": "atlas-server",
+      "expectedTests": [
+        "atlas.snapshot",
+        "atlas.reload",
+        "atlas.failure-fixture",
+        "atlas.stopped"
+      ],
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 4
+    },
+    "atlas-client": {
+      "minTests": 3,
+      "eulaRequired": true,
+      "requiredCapabilities": [
+        "integrated-server",
+        "jei-runtime"
+      ],
+      "expectedTests": [
+        "atlas.integrated",
+        "atlas.jei",
+        "atlas.client-stopped"
+      ],
+      "results": "results.json",
+      "driver": "process",
+      "runtime": "atlas-client"
+    },
+    "atlas-offline": {
+      "expectedTests": [
+        "atlas.contracts"
+      ],
+      "results": "results.json",
+      "runtime": "atlas-offline",
+      "driver": "process",
+      "minTests": 1
+    },
+    "atlas-negative": {
+      "minTests": 1,
+      "eulaRequired": true,
+      "expectedTests": [
+        "atlas.expected-failure"
+      ],
+      "results": "results.json",
+      "driver": "process",
+      "runtime": "atlas-negative"
+    },
+    "atlas-fabric-server": {
+      "runtime": "atlas-fabric-server",
+      "expectedTests": [
+        "atlas.snapshot",
+        "atlas.reload",
+        "atlas.failure-fixture",
+        "atlas.stopped"
+      ],
+      "requiredCapabilities": [
+        "dedicated-server"
+      ],
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 4
+    },
+    "atlas-fabric-client": {
+      "runtime": "atlas-fabric-client",
+      "expectedTests": [
+        "atlas.integrated",
+        "atlas.emi",
+        "atlas.client-stopped"
+      ],
+      "requiredCapabilities": [
+        "integrated-server",
+        "emi-runtime"
+      ],
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 3
+    },
+    "atlas-world": {
+      "runtime": "atlas-world",
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 4,
+      "expectedTests": [
+        "atlas.loot",
+        "atlas.worldgen",
+        "atlas.observation",
+        "atlas.world-stopped"
+      ]
+    }
+  }
+}
