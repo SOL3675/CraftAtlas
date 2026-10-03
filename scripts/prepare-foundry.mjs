@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync, copyFileSync, openSync, closeSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { selectNpmCli } from './lib/npm-cli.mjs';
 import { fileURLToPath } from 'node:url';
 
@@ -27,8 +27,14 @@ function main() {
   if (process.versions.node !== pin.node) throw new Error(`Use Node ${pin.node}; found ${process.versions.node}`);
   const cli = selectNpmCli(root, pin.npm, { ...process.env, npm_config_cache: join(root, '.harness/cache/npm') });
   const source = args.length ? resolve(args[1]) : pin.repository;
-  if (args.length && realpathSync(run('git', ['rev-parse', '--show-toplevel'], source, true)) !== realpathSync(source)) {
-    throw new Error('--source must name the Foundry Git root.');
+  if (args.length) {
+    const gitRoot = realpathSync(run('git', ['rev-parse', '--show-toplevel'], source, true));
+    const sourceRoot = realpathSync(source);
+    // Windows Git and Node can retain different casing for the same directory.
+    // Compare canonical paths with platform path semantics, not string equality.
+    if (relative(gitRoot, sourceRoot) !== '') {
+      throw new Error(`--source must name the Foundry Git root (Git root: ${gitRoot}; source: ${sourceRoot}).`);
+    }
   }
   const vendor = join(root, '.harness/vendor');
   mkdirSync(vendor, { recursive: true });

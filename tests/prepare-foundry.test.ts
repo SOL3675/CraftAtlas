@@ -36,7 +36,7 @@ function fixture(t: test.TestContext) {
   setPin();
   const artifact = join(atlas, '.harness', 'vendor', 'craft-foundry.tgz');
   const lock = join(atlas, '.harness', 'vendor', 'prepare.lock');
-  const run = () => spawnSync(process.execPath, ['scripts/prepare-foundry.mjs', '--source', '../..'], { cwd: atlas, encoding: 'utf8' });
+  const run = (sourcePath = '../..') => spawnSync(process.execPath, ['scripts/prepare-foundry.mjs', '--source', sourcePath], { cwd: atlas, encoding: 'utf8' });
   return { source, atlas, commit, artifact, lock, run, setPin };
 }
 const digest = (file: string) => createHash('sha512').update(readFileSync(file)).digest('hex');
@@ -78,4 +78,20 @@ test('bootstrap rejects mutable refs and overlapping work while preserving exist
   const overlap = f.run(); assert.equal(overlap.status, 1); assert.match(overlap.stderr, /EEXIST/);
   assert.equal(readFileSync(f.lock, 'utf8'), 'other owner');
   assert.equal(readFileSync(f.artifact, 'utf8'), 'previous package bytes');
+});
+
+test('bootstrap rejects a source subdirectory without creating vendor state', t => {
+  const f = fixture(t);
+  const result = f.run('..');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--source must name the Foundry Git root/);
+  assert.equal(existsSync(join(f.atlas, '.harness', 'vendor')), false);
+});
+
+test('bootstrap accepts Windows casing aliases of the source Git root', { skip: process.platform !== 'win32' }, t => {
+  const f = fixture(t);
+  const result = f.run(f.source.toUpperCase());
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(existsSync(f.artifact), true);
+  assert.equal(git(f.source, 'rev-parse', 'HEAD'), f.commit);
 });

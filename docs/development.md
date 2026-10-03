@@ -19,7 +19,7 @@ pnpm exec mch skills install --destination .agents/skills --json
 
 The checked-in `craft-foundry.source.json` records the verified repository URL, a full immutable commit, package version, and build-tool versions. The script selects an npm JS entry point matching the pin, including an upgraded global prefix when PATH still exposes an older bundled npm, then fetches that commit into a fresh isolated Git checkout, runs Foundry's `npm ci --ignore-scripts` and build, then packages it to `.harness/vendor/craft-foundry.tgz`. Atlas's manifest references that stable local path; its lockfile verifies the exact packed bytes. Tarballs, node_modules, and build output are never committed.
 
-`--source` uses Git objects from the given checkout, not its dirty files or current branch. The required commit must exist there. The script never changes that checkout, initializes its submodules, or installs Atlas while building Foundry. Existing package bytes are replaced only after a successful build; concurrent bootstraps are rejected. A stale bootstrap lock requires confirming its owner has stopped before removing it.
+`--source` must name the checkout's Git root, with Windows casing aliases accepted; a subdirectory is rejected. It uses Git objects from that checkout, not its dirty files or current branch. The required commit must exist there. The script never changes that checkout, initializes its submodules, or installs Atlas while building Foundry. Existing package bytes are replaced only after a successful build; concurrent bootstraps are rejected. A stale bootstrap lock requires confirming its owner has stopped before removing it.
 
 For a fresh machine without the Foundry checkout:
 
