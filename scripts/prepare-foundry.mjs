@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync, copyFileSync, openSync, closeSync } from 'node:fs';
-import { delimiter, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { selectNpmCli } from './lib/npm-cli.mjs';
 import { fileURLToPath } from 'node:url';
 
 // Run before pnpm install: no dependencies or consumer lifecycle hooks required.
@@ -14,19 +15,6 @@ function run(command, args, cwd, capture = false) {
   if (result.status !== 0) throw new Error(`${command} ${args[0]} failed (${result.status ?? result.signal})`);
   return result.stdout?.trim();
 }
-function npmCli() {
-  // Execute npm's JS entry point with Node, avoiding Windows .cmd/shell quoting.
-  const candidates = [process.env.npm_execpath];
-  for (const entry of (process.env.PATH ?? '').split(delimiter)) {
-    if (!entry) continue;
-    candidates.push(join(entry, 'node_modules/npm/bin/npm-cli.js'));
-    const shim = join(entry, 'npm');
-    if (existsSync(shim)) candidates.push(realpathSync(shim));
-  }
-  const cli = candidates.find(file => file && file.endsWith('npm-cli.js') && existsSync(file));
-  if (!cli) throw new Error('npm CLI not found. Install the pinned npm with Node and put it on PATH.');
-  return cli;
-}
 function main() {
   const args = process.argv.slice(2);
   if (args.length !== 0 && !(args.length === 2 && args[0] === '--source' && args[1])) {
@@ -37,8 +25,7 @@ function main() {
       !/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(?:\.git)?$/.test(pin.repository) ||
       !/^\d+\.\d+\.\d+$/.test(pin.version)) throw new Error('Invalid source pin: require an HTTPS repository, full lowercase commit SHA, and package version.');
   if (process.versions.node !== pin.node) throw new Error(`Use Node ${pin.node}; found ${process.versions.node}`);
-  const cli = npmCli();
-  if (run(process.execPath, [cli, '--version'], root, true) !== pin.npm) throw new Error(`Use npm ${pin.npm} to reproduce package bytes.`);
+  const cli = selectNpmCli(root, pin.npm, { ...process.env, npm_config_cache: join(root, '.harness/cache/npm') });
   const source = args.length ? resolve(args[1]) : pin.repository;
   if (args.length && realpathSync(run('git', ['rev-parse', '--show-toplevel'], source, true)) !== realpathSync(source)) {
     throw new Error('--source must name the Foundry Git root.');
@@ -57,7 +44,12 @@ function main() {
     run('git', ['init', '--quiet'], checkout);
     run('git', ['config', 'core.autocrlf', 'false'], checkout);
     run('git', ['config', 'core.eol', 'lf'], checkout);
-    run('git', ['-c', 'submodule.recurse=false', 'fetch', '--no-tags', '--depth=1', '--', source, pin.commit], checkout);
+    try {
+      run('git', ['-c', 'submodule.recurse=false', 'fetch', '--no-tags', '--depth=1', '--', source, pin.commit], checkout);
+    } catch (error) {
+      if (args.length) throw error;
+      throw new Error(`Cannot fetch the pinned Foundry commit from ${pin.repository}. Use existing Git read access or an authenticated --source checkout; CI setup is documented in docs/development.md. ${error.message}`);
+    }
     run('git', ['-c', 'submodule.recurse=false', 'checkout', '--quiet', '--detach', pin.commit], checkout);
     if (run('git', ['rev-parse', 'HEAD'], checkout, true) !== pin.commit) throw new Error('Source identity mismatch');
     const pkg = JSON.parse(readFileSync(join(checkout, 'package.json'), 'utf8'));

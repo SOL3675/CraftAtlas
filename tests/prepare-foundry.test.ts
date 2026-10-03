@@ -18,7 +18,8 @@ function fixture(t: test.TestContext) {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const source = join(root, 'Foundry');
   const atlas = join(source, 'projects', 'craft-atlas');
-  mkdirSync(join(atlas, 'scripts'), { recursive: true });
+  mkdirSync(join(atlas, 'scripts', 'lib'), { recursive: true });
+  copyFileSync(new URL('../scripts/lib/npm-cli.mjs', import.meta.url), join(atlas, 'scripts', 'lib', 'npm-cli.mjs'));
   copyFileSync(script, join(atlas, 'scripts', 'prepare-foundry.mjs'));
   const pkg = { name: 'craft-foundry', version: '0.1.1', private: true, type: 'module', files: ['dist'], scripts: { build: 'node build.mjs' } };
   writeFileSync(join(source, 'package.json'), JSON.stringify(pkg));

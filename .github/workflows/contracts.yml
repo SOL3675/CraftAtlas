@@ -9,17 +9,52 @@ jobs:
       matrix:
         os: [windows-2022, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
+    env:
+      CRAFTFOUNDRY_TOKEN_CONFIGURED: ${{ secrets.CRAFTFOUNDRY_READ_TOKEN != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24.19.0'
-      - run: npm install --global npm@11.9.0 pnpm@11.19.0
-      # The pinned Foundry commit must be reachable with the runner's Git access.
-      # Private cross-repository access must be provisioned by the CI owner.
-      - run: node scripts/prepare-foundry.mjs
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm check
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm exec mch targets --json
+      - run: npm install --prefix .harness/ci/package-manager --no-save --package-lock=false --ignore-scripts npm@11.9.0 pnpm@11.19.0
+      - name: Select installed npm for the bootstrap
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import { appendFileSync } from 'node:fs';
+          import { resolve } from 'node:path';
+          appendFileSync(process.env.GITHUB_ENV, 'CRAFTFOUNDRY_NPM_CLI=' + resolve('.harness/ci/package-manager/node_modules/npm/bin/npm-cli.js') + '\n');
+          JS
+      - name: Test bootstrap before repository-access prerequisites
+        run: node --test tests/npm-cli.test.ts tests/prepare-foundry.test.ts
+      - name: Read immutable Foundry ref
+        id: foundry
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const pin = JSON.parse(readFileSync('craft-foundry.source.json', 'utf8'));
+          if (pin.repository !== 'https://github.com/SOL3675/CraftFoundry.git' || !/^[0-9a-f]{40}$/.test(pin.commit)) throw Error('Unexpected Foundry source pin');
+          appendFileSync(process.env.GITHUB_OUTPUT, 'commit=' + pin.commit + '\n');
+          JS
+      - name: Checkout private Foundry with an existing read token
+        if: env.CRAFTFOUNDRY_TOKEN_CONFIGURED == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SOL3675/CraftFoundry
+          ref: ${{ steps.foundry.outputs.commit }}
+          token: ${{ secrets.CRAFTFOUNDRY_READ_TOKEN }}
+          path: .harness/ci/foundry-source
+          persist-credentials: false
+          submodules: false
+      - name: Prepare from authenticated checkout
+        if: env.CRAFTFOUNDRY_TOKEN_CONFIGURED == 'true'
+        run: node scripts/prepare-foundry.mjs --source .harness/ci/foundry-source
+      - name: Prepare using existing runner Git access or public origin
+        if: env.CRAFTFOUNDRY_TOKEN_CONFIGURED != 'true'
+        run: node scripts/prepare-foundry.mjs
+      - run: node .harness/ci/package-manager/node_modules/pnpm/bin/pnpm.cjs install --frozen-lockfile --ignore-scripts
+      - run: node .harness/ci/package-manager/node_modules/pnpm/bin/pnpm.cjs check
+      - run: node .harness/ci/package-manager/node_modules/pnpm/bin/pnpm.cjs test
+      - run: node .harness/ci/package-manager/node_modules/pnpm/bin/pnpm.cjs build
+      - run: node .harness/ci/package-manager/node_modules/pnpm/bin/pnpm.cjs exec mch targets --json
