@@ -28,10 +28,10 @@ function main() {
   const cli = selectNpmCli(root, pin.npm, { ...process.env, npm_config_cache: join(root, '.harness/cache/npm') });
   const source = args.length ? resolve(args[1]) : pin.repository;
   if (args.length) {
-    const gitRoot = realpathSync(run('git', ['rev-parse', '--show-toplevel'], source, true));
-    const sourceRoot = realpathSync(source);
-    // Windows Git and Node can retain different casing for the same directory.
-    // Compare canonical paths with platform path semantics, not string equality.
+    const gitRoot = realpathSync.native(run('git', ['rev-parse', '--show-toplevel'], source, true));
+    const sourceRoot = realpathSync.native(source);
+    // Native realpath resolves Windows short names; path comparison also accepts
+    // casing aliases while still rejecting a Git checkout's subdirectories.
     if (relative(gitRoot, sourceRoot) !== '') {
       throw new Error(`--source must name the Foundry Git root (Git root: ${gitRoot}; source: ${sourceRoot}).`);
     }
