@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "repository": "https://github.com/SOL3675/CraftFoundry.git",
-  "commit": "3f4ff1820beda85589d0acf503bc3388bee6f4ac",
+  "commit": "cda389a01501e821ed92fd8524473dc1a290bcde",
   "version": "0.1.3",
   "node": "24.19.0",
   "npm": "11.9.0"
