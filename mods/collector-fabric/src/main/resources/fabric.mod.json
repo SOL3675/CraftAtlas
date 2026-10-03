@@ -4,6 +4,7 @@
   "version": "${version}",
   "name": "Craft Atlas Collector",
   "description": "Runtime evidence collector for Craft Atlas",
+  "license": "MIT",
   "environment": "*",
   "entrypoints": {
     "main": [

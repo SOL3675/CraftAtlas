@@ -75,4 +75,8 @@ node dist/packages/cli/src/main.js validate --snapshot fixtures/before.json --js
 
 ビルドは JavaScript と併せて `dist/schemas/` と `dist/packages/web/public/` を生成します。配布した CLI でも同じスキーマと UI を使用できます。
 
-ソース取得には Git、ビルドには npm 11.9.0 と Node 24.19.0 が必要です。`--source` を省略すると記録済み origin から固定コミットを取得します。Windows でも同じ Node コマンドを使えます。将来 `CraftFoundry/projects/craft-atlas` に配置する場合は `--source ../..` を指定します。ライセンスは未設定であり、公開リポジトリ化だけで利用許諾が付与されるわけではありません。
+ソース取得には Git、ビルドには npm 11.9.0 と Node 24.19.0 が必要です。`--source` を省略すると記録済み origin から固定コミットを取得します。Windows でも同じ Node コマンドを使えます。将来 `CraftFoundry/projects/craft-atlas` に配置する場合は `--source ../..` を指定します。
+
+## ライセンス
+
+CraftAtlas 独自のコードとドキュメントには [MIT](LICENSE) を適用します（Copyright (c) 2026 SOL3675）。第三者のライセンスと著作権表示は維持します。Gradle Wrapper スクリプトの Apache-2.0 ヘッダーと JAR 内の `META-INF/LICENSE` は変更しません。依存ライブラリ、取得する Mod、Minecraft はそれぞれのライセンスに従います。ビルド時に LICENSE を `dist/` へコピーし、collector のバイナリ・ソース JAR には `META-INF/LICENSE` として同梱します。プロジェクトは引き続き未公開・`private: true` です。

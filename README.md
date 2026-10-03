@@ -36,4 +36,6 @@ Supported interpretations are deliberately bounded: basic recipes, Mekanism enri
 
 `packages/` is one TypeScript package, not a workspace. Java collectors are separate Gradle roots under `mods/`. The harness is consumed only through the packed `craft-foundry` exports. Machine configuration, game files, caches, databases, and generated packages remain ignored.
 
-The project is private and has no project-wide license grant. Public repository visibility alone would not change that; preserve third-party notices and decide licensing separately before release.
+## License
+
+Original CraftAtlas code and documentation are licensed under [MIT](LICENSE), copyright (c) 2026 SOL3675. Separate third-party licenses and copyright notices remain applicable: Gradle Wrapper scripts retain Apache-2.0 headers, and their JARs retain `META-INF/LICENSE`. Dependencies, downloaded Mods, and Minecraft retain their own licenses. Builds copy LICENSE into `dist/`; collector binary and source JARs include it as `META-INF/LICENSE`. The project remains `private: true` and unpublished.
