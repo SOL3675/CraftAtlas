@@ -16,8 +16,8 @@ importers:
         specifier: 24.3.0
         version: 24.3.0
       craft-foundry:
-        specifier: file:craft-foundry-0.1.1.tgz
-        version: file:craft-foundry-0.1.1.tgz
+        specifier: file:.harness/vendor/craft-foundry.tgz
+        version: file:.harness/vendor/craft-foundry.tgz
       typescript:
         specifier: 5.9.2
         version: 5.9.2
@@ -30,8 +30,8 @@ packages:
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
-  craft-foundry@file:craft-foundry-0.1.1.tgz:
-    resolution: {integrity: sha512-P4GqzQe5A2LYbXwTXD1CEnbDqyLUJFUn1HhqaV8qQTC9U49BT9mbjV1yhNjxIiZCDb6VfK4y5Nreccs2+lf7gA==, tarball: file:craft-foundry-0.1.1.tgz}
+  craft-foundry@file:.harness/vendor/craft-foundry.tgz:
+    resolution: {integrity: sha512-R+7L83P1N9VvAnUTpPlJp3Iug2dZafJ0ApnS+YetLons3m4kswW4UmCzmszprsNXx/MdJcolkTS19DvsV1fNjA==, tarball: file:.harness/vendor/craft-foundry.tgz}
     version: 0.1.1
     engines: {node: '>=24 <25'}
     hasBin: true
@@ -74,7 +74,7 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  craft-foundry@file:craft-foundry-0.1.1.tgz:
+  craft-foundry@file:.harness/vendor/craft-foundry.tgz:
     dependencies:
       ajv: 8.20.0
       sax: 1.6.1

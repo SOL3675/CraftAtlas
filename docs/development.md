@@ -1,39 +1,50 @@
-# CraftAtlas の開発構成と CraftFoundry 依存
+# Development
 
-CraftAtlas の実ディレクトリは `F:\workspace\craft-atlas`、npm 名は `craft-atlas` です。Git 履歴は CraftFoundry と独立しています。`packages/core`、`cli`、`web`、`harness` は一つの TypeScript プロジェクトのソース区分で、個別 npm workspace ではありません。NeoForge と Fabric の収集 Mod は `mods/collector` と `mods/collector-fabric` の独立 Gradle root です。
+Use Git, Node.js 24.19.0, npm 11.9.0 (Foundry package generation), and pnpm 11.19.0. `packages/` contains one TypeScript project; the collector directories are independent Gradle roots. Use `pnpm-lock.yaml` here and `package-lock.json` in CraftFoundry. Bootstrap caches remain in ignored project state. In restricted cloud environments, configure package-manager home/cache environment variables to writable locations in the environment, rather than committing machine-specific paths.
 
-CraftFoundry の実ディレクトリは現在 `F:\workspace\mc-dev-harness`、npm 名は `craft-foundry`、互換 CLI は `mch` です。CraftAtlas は `file:craft-foundry-0.1.1.tgz` を開発依存に持ちます。tarball と pnpm の integrity を Git 管理し、ソースや開発用シンボリックリンクには依存しません。Node.js 24 と pnpm 11.19.0 を使用します。
+## Restore the unpublished harness
 
-## 検証
+Run from Atlas in PowerShell, cmd, or a POSIX shell:
 
-```powershell
+```console
+node scripts/prepare-foundry.mjs --source ../CraftFoundry
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm check
 pnpm test
 pnpm build
 pnpm exec mch --help
 pnpm exec mch targets --json
-pnpm exec mch doctor --json
-pnpm exec mch inspect --target neoforge-1.21.1 --json
-pnpm exec mch build --target neoforge-1.21.1 --json
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-offline --json
+pnpm exec mch skills install --destination .agents/skills --json
 ```
 
-Fabric も `--target fabric-1.21.1` で inspect / build / atlas-offline を確認します。Minecraft / Java の前提を診断した後、変更に関係する実ゲーム Suite を [使い方](usage.md) と [Fabric 手順](fabric.md) に従って実行します。全必須 Suite を実行していない検証を release 合格とは扱いません。
+The checked-in `craft-foundry.source.json` records the verified repository URL, a full immutable commit, package version, and build-tool versions. The script checks the versions, fetches that commit into a fresh isolated Git checkout, runs Foundry's `npm ci --ignore-scripts` and build, then packages it to `.harness/vendor/craft-foundry.tgz`. Atlas's manifest references that stable local path; its lockfile verifies the exact packed bytes. Tarballs, node_modules, and build output are never committed.
 
-runtime アダプターは `craft-foundry/core/*` と `craft-foundry/adapters/runtime/*` の明示 export を利用します。相対的な `node_modules` パスに依存しないため、TypeScript ソースと `dist/packages/harness/src/` の両方で同じ依存を解決できます。CLI の呼出しは `pnpm exec mch` または `node node_modules/craft-foundry/dist/cli/main.js` を使用します。
+`--source` uses Git objects from the given checkout, not its dirty files or current branch. The required commit must exist there. The script never changes that checkout, initializes its submodules, or installs Atlas while building Foundry. Existing package bytes are replaced only after a successful build; concurrent bootstraps are rejected. A stale bootstrap lock requires confirming its owner has stopped before removing it.
 
-## ハーネス更新
+For a fresh machine without the Foundry checkout:
 
-1. CraftFoundry 側でパッケージ版を上げ、`npm run check` と `npm pack` を実行します。
-2. 生成した新しい tarball を CraftAtlas のルートに配置し、`pnpm add --save-dev --save-exact ./craft-foundry-<version>.tgz --ignore-scripts` で依存と lockfile を更新します。旧名からの初回移行では `mc-dev-harness` を開発依存から外します。旧 tarball は参照がなくなってから取り除きます。
-3. CLI、明示 API、Schema、Skills が同じ版の配布物から解決されることを確認します。`pnpm exec mch skills install --destination .agents/skills --json` は利用者の編集を保全し、導入先の `.agents/skills/.mch-skills.json` を更新します。この記録を Git 管理し、実体の Skill は配布物から復元します。
-4. 上記の frozen install / 型検査 / テスト / ビルドと対象 Suite を実行し、新 tarball・package.json・lockfile・Skills の記録を一緒にレビューします。同じ版の tarball を内容だけ差し替えないでください。
+```console
+node scripts/prepare-foundry.mjs
+pnpm install --frozen-lockfile --ignore-scripts
+```
 
-## 将来の private repository / サブモジュール
+Git must already have access to the recorded origin if it is private. The pinned commit must be reachable there; local commits work only with `--source` until pushed. Registry access is still needed for locked third-party dependencies, but the `craft-foundry` package is not fetched from npm. Git checkout uses LF and npm packaging uses fixed tool versions to stabilize tarball integrity across OSes. Do not repair an integrity failure by bypassing lock checks; inspect the source pin and tool versions.
 
-両リポジトリに remote はまだありません。各既存履歴を別々の GitHub private repository へ push した後、CraftFoundry 内の `projects/craft-atlas` に、この一つの checkout を停止時間中に移動してサブモジュール登録する予定です。今回は移動・複製・`.gitmodules` 作成・remote 設定・push をしていません。元 checkout を二重管理しません。
+Future placement at `CraftFoundry/projects/craft-atlas` uses `--source ../..`. Explicit paths also support differently named Windows checkouts. There is no automatic parent detection, root npm workspace, recursive clone, install lifecycle hook, or parent-child install cycle. Submodules are not required or created by this workflow.
 
-子は自身の commit と pnpm lockfile を管理し、親は子 commit の gitlink を管理します。親 npm workspace に子を混ぜず、ハーネス配布物に CraftAtlas を同梱しません。クラウドでは private 子リポジトリへのアクセスを準備し、submodule の commit を復元して、親 npm と子 pnpm を別々にインストールします。
+## Update the dependency deliberately
 
-この端末の `harness.local.json` は旧 CraftFoundry パスのツールと asset cache を共有しています。ディレクトリ移動時やクラウド移行時は実在するパスに設定し直してください。Java home・EULA・認証情報を共有設定へ移さず、過去の Run と検証記録は当時の名称を保持します。
+1. Commit and validate Foundry changes on its development branch. For package/API changes, update its version and npm lock consistently; source-only development pins can distinguish commits even at the same package version.
+2. Set the full commit and matching package version in `craft-foundry.source.json`. Do not use `dev`, `main`, `HEAD`, or a movable tag as the pin. Make that commit available at the recorded origin before expecting remote-only restoration. If an initial squash merge changes commit identity, pin the reachable merged commit afterward; squash does not erase dev/PR history.
+3. Run `node scripts/prepare-foundry.mjs --source <checkout>` and `pnpm update craft-foundry --lockfile-only --ignore-scripts` to refresh the file dependency's integrity. Then run a clean `pnpm install --frozen-lockfile --ignore-scripts`, check, test, and build. Review the lockfile diff; do not bypass integrity checks.
+4. Restore/update Skills with the installer above, which preserves user edits, and review `.agents/skills/.mch-skills.json`. Re-run the affected harness suites as described in [usage](usage.md). Commit the source pin, dependency/lock changes, and Skills provenance together, with the reason for the update. Do not commit archives or generated Skills.
+
+The six imports are `core/config`, `core/cache`, `core/tools`, `core/types`, `adapters/runtime/server`, and `adapters/runtime/mc-pilot`, under `craft-foundry/`. Source and compiled adapters resolve these same exports; do not edit installed node_modules or copy harness source.
+
+## Validation and CI
+
+The bootstrap precedes frozen install in [contract CI](../.github/workflows/contracts.yml). Windows and Linux execute the same Node script. The workflow requires normal Git read access to the pinned Foundry repository; for separate private repositories, the default Atlas GITHUB_TOKEN does not automatically have that access. Configure an already authorized read-only checkout outside the workflow and pass `--source`, or supply repository access through the CI administrator's approved method. Do not commit credentials. Until that access or public read access exists, remote bootstrap is a visible CI prerequisite.
+
+For integration, run doctor, inspect/build for each affected target, and its atlas-offline suite, followed by actual game suites when prerequisites are available. Doctor failures for absent Java/backend/display/EULA are environment blockers, not passes. Offline unit tests and successful TypeScript builds do not prove real Minecraft behavior.
+
+Keep English procedural docs and a linked Japanese README. Retain necessary usage, constraints, licenses, and agent instructions; record changes/rationale in commits instead of separate design restatements, migration records, or phase histories. Pushes, PRs, merges, visibility changes, and publication are separate authorized operations.
