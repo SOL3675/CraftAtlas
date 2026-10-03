@@ -36,7 +36,13 @@ function fixture(t: test.TestContext) {
   setPin();
   const artifact = join(atlas, '.harness', 'vendor', 'craft-foundry.tgz');
   const lock = join(atlas, '.harness', 'vendor', 'prepare.lock');
-  const run = (sourcePath = '../..') => spawnSync(process.execPath, ['scripts/prepare-foundry.mjs', '--source', sourcePath], { cwd: atlas, encoding: 'utf8' });
+  const run = (sourcePath = '../..', umask?: number) => {
+    const args = umask === undefined ? ['scripts/prepare-foundry.mjs', '--source', sourcePath] : [
+      '--input-type=module', '-e',
+      `process.umask(${umask});process.argv=[process.execPath,'scripts/prepare-foundry.mjs','--source',${JSON.stringify(sourcePath)}];await import('./scripts/prepare-foundry.mjs');`,
+    ];
+    return spawnSync(process.execPath, args, { cwd: atlas, encoding: 'utf8' });
+  };
   return { source, atlas, commit, artifact, lock, run, setPin };
 }
 const digest = (file: string) => createHash('sha512').update(readFileSync(file)).digest('hex');
@@ -45,9 +51,9 @@ test('bootstrap builds the pinned commit reproducibly from a dirty parent checko
   const f = fixture(t);
   writeFileSync(join(f.source, 'build.mjs'), "throw new Error('dirty source must never run');");
   const statusBefore = git(f.source, 'status', '--porcelain');
-  const first = f.run(); assert.equal(first.status, 0, first.stderr);
+  const first = f.run('../..', 0o077); assert.equal(first.status, 0, first.stderr);
   const hash = digest(f.artifact);
-  const second = f.run(); assert.equal(second.status, 0, second.stderr);
+  const second = f.run('../..', 0o022); assert.equal(second.status, 0, second.stderr);
   assert.equal(digest(f.artifact), hash);
   assert.equal(git(f.source, 'rev-parse', 'HEAD'), f.commit);
   assert.equal(git(f.source, 'status', '--porcelain'), statusBefore);

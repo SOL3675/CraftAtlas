@@ -28,7 +28,7 @@ node scripts/prepare-foundry.mjs
 pnpm install --frozen-lockfile --ignore-scripts
 ```
 
-Git must already have access to the recorded origin if it is private. The pinned commit must be reachable there; local commits work only with `--source` until pushed. Registry access is still needed for locked third-party dependencies, but the `craft-foundry` package is not fetched from npm. Git checkout uses LF and npm packaging uses fixed tool versions to stabilize tarball integrity across OSes. Do not repair an integrity failure by bypassing lock checks; inspect the source pin and tool versions.
+Git must already have access to the recorded origin if it is private. The pinned commit must be reachable there; local commits work only with `--source` until pushed. Registry access is still needed for locked third-party dependencies, but the `craft-foundry` package is not fetched from npm. Git checkout uses LF, package generation uses umask `022`, and npm packaging uses fixed tool versions to stabilize tarball integrity across OSes and cloud permission defaults. The caller's shell umask is unchanged. Do not repair an integrity failure by bypassing lock checks; inspect the source pin and tool versions.
 
 Future placement at `CraftFoundry/projects/craft-atlas` uses `--source ../..`. Explicit paths also support differently named Windows checkouts. There is no automatic parent detection, root npm workspace, recursive clone, install lifecycle hook, or parent-child install cycle. Submodules are not required or created by this workflow.
 

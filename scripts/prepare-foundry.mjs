@@ -43,8 +43,12 @@ function main() {
   writeFileSync(fd, JSON.stringify({ pid: process.pid, commit: pin.commit }) + '\n');
   closeSync(fd);
   let temp;
+  const previousUmask = process.umask();
   try {
     temp = mkdtempSync(join(vendor, 'prepare-'));
+    // npm preserves file permissions in tar headers. Match normal GitHub runner
+    // permissions even when the caller uses a restrictive cloud umask.
+    process.umask(0o022);
     const checkout = join(temp, 'source');
     mkdirSync(checkout);
     run('git', ['init', '--quiet'], checkout);
@@ -70,6 +74,7 @@ function main() {
     renameSync(staged, join(vendor, 'craft-foundry.tgz'));
     console.log(`Prepared craft-foundry ${pin.version} from ${pin.commit}\n${packed[0].integrity}\nNext: pnpm install --frozen-lockfile --ignore-scripts`);
   } finally {
+    process.umask(previousUmask);
     if (temp) rmSync(temp, { recursive: true, force: true });
     rmSync(lock, { force: true });
   }

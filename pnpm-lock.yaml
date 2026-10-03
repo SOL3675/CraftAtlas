@@ -31,7 +31,7 @@ packages:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
   craft-foundry@file:.harness/vendor/craft-foundry.tgz:
-    resolution: {integrity: sha512-sGDJnefJwSNXBlXDd4IYODWutpBxlHdyg4CJHhqmH2u4q2Oj5QfefTZKYdtm66QJxd6iaQFPbcNZEXBixVtJWw==, tarball: file:.harness/vendor/craft-foundry.tgz}
+    resolution: {integrity: sha512-YG0dKgP/Yf1xOpW+q44ACVBH72DSGgKiGNOFgxvCD+8UCDJjYZ925BPysxj0o+h7YRLDaNDdnR1peTymBwf0CA==, tarball: file:.harness/vendor/craft-foundry.tgz}
     version: 0.1.2
     engines: {node: '>=24 <25'}
     hasBin: true
