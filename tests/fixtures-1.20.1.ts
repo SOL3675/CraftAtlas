@@ -14,7 +14,7 @@ export function snapshot1201(loader: 'forge' | 'fabric'): Snapshot {
   const low = variant('mod/embedded', { ...data, result: { item: 'minecraft:diamond', count: 1 } });
   const high = variant('file/override', data);
   const custom = variant('mod/embedded', { type: 'atlas:opaque', inputs: ['minecraft:dirt'], result: { item: 'minecraft:diamond' } });
-  const conditional = variant('mod/embedded', { ...data, 'forge:conditions': [{ type: 'forge:false' }] });
+  const conditional = variant('mod/embedded', { ...data, conditions: [{ type: 'forge:false' }] });
   s.datapack = { directories: ['recipes', 'machines'], selectedPacks: ['vanilla', 'mod:atlasfixture', 'file/override'], loadedPacks: ['vanilla', 'mod/embedded', 'file/override'], disabledPacks: ['file/disabled'], resources: [
     { id: 'atlas:recipes/diamond.json', effective: high, stack: [low, high] },
     { id: 'atlas:recipes/source_only.json', effective: custom, stack: [custom] },

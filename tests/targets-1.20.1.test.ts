@@ -91,9 +91,22 @@ test('configured matrix preserves 1.21.1 requirements and pins 1.20.1 loaders, J
 });
 test('1.20.1 NBT, custom predicates and loader conditions retain uncertainty', () => {
   const s = snapshot1201('forge'); (s.recipes[0].data as any).result.nbt = '{Damage:4}';
-  (s.recipes[0].data as any)['forge:conditions'] = [{ type: 'atlas:opaque_hook' }];
+  (s.recipes[0].data as any).conditions = [{ type: 'atlas:opaque_hook' }];
   const p = normalize(s).processes.find(p => p.id === 'atlas:diamond')!;
   assert.deepEqual(p.outputs[0].components, { nbt: '{Damage:4}' }); assert.ok(p.unknown.some(u => u.includes('NBT'))); assert.ok(p.requirements.some(r => r.kind === 'opaque'));
+});
+test('Forge 1.20.1 unprefixed recipe conditions stay opaque without applying to other targets', () => {
+  for (const loader of ['forge', 'fabric'] as const) {
+    const s = snapshot1201(loader); s.datapack = undefined;
+    (s.recipes[0].data as any).conditions = [{ type: 'atlas:opaque_hook' }];
+    const p = normalize(s).processes.find(p => p.id === 'atlas:diamond')!;
+    assert.equal(p.requirements.some(requirement => requirement.kind === 'opaque'), loader === 'forge');
+    if (loader === 'forge') {
+      assert.equal(analyze(normalize(s), scenario(), 'minecraft:diamond').status, 'unknown');
+      s.minecraft = '1.21.1'; s.loader = 'neoforge';
+      assert.ok(!normalize(s).processes.find(p => p.id === 'atlas:diamond')!.requirements.some(requirement => requirement.kind === 'opaque'));
+    }
+  }
 });
 for (const loader of ['forge', 'fabric'] as const) test(`${loader} 1.20.1: reviewed vanilla runtime forms preserve shaped slots, quantities, smithing and fuel unknowns`, () => {
   const s = snapshot1201(loader); s.datapack = undefined;

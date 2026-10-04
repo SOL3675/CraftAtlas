@@ -14,7 +14,7 @@ import { validateSnapshot } from '../../core/src/validate.ts';
 import { bytesHash, hash } from '../../core/src/hash.ts';
 import { verifyCommonFixture } from './fabric-common.ts';
 import { server1201, target1201 } from './targets-1.20.1.ts';
-import { verify1201 } from './fixture-1.20.1.ts';
+import { verify1201, verify1201Viewer } from './fixture-1.20.1.ts';
 import { runArtifacts, saveResults, waitFor, RequiredUnsupported } from './common.ts';
 import type { Case } from './common.ts';
 
@@ -115,6 +115,7 @@ try {
   assert.equal(snapshot.viewer.kind,metadata.viewer);
   if (snapshot.viewer.coverage.some(c => c.status !== 'complete')) throw new RequiredUnsupported('Required viewer capture is incomplete; failed entries and raw evidence are retained');
   assert.equal(snapshot.viewer.session, snapshot.session); assert.equal(snapshot.viewer.generation, snapshot.generation);
+  writeFileSync(join(session, 'viewer-fixture.json'), JSON.stringify(verify1201Viewer(snapshot), null, 2));
   assert.ok(snapshot.viewer.recipes.some(r => r.recipeId && snapshot.recipes.some(s => s.id === r.recipeId)));
   assert.ok(snapshot.viewer.recipes.some(r => r.category === 'minecraft:smelting' && r.equipment.includes('minecraft:furnace')));
 

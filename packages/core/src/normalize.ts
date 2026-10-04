@@ -99,7 +99,9 @@ export function normalize(snapshot: Snapshot): Model {
         p.costs.push({ kind: 'time', amount: data.cookingtime, unit: 'tick', basis: 'runtime-definition' });
         if (r.type !== 'minecraft:campfire_cooking') p.requirements.push({ kind: 'opaque', id: 'fuel supply and burn duration', evidence: [ev] });
       }
-      for (const key of ['neoforge:conditions', 'forge:conditions', 'fabric:load_conditions']) if (data[key]) p.requirements.push({ kind: 'opaque', id: JSON.stringify(data[key]), evidence: [ev] });
+      const conditionKeys = ['neoforge:conditions', 'forge:conditions', 'fabric:load_conditions'];
+      if (s.minecraft === '1.20.1' && s.loader === 'forge') conditionKeys.push('conditions');
+      for (const key of conditionKeys) if (data[key]) p.requirements.push({ kind: 'opaque', id: JSON.stringify(data[key]), evidence: [ev] });
       if (s.minecraft === '1.20.1' && (data.result?.nbt || data.output?.nbt)) p.unknown.push('Output NBT is retained; NBT matching and mutations are not interpreted');
       for (const input of p.inputs) for (const a of input.alternatives) {
         if (a.predicate) p.unknown.push('Custom ingredient predicate');
