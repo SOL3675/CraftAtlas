@@ -22,6 +22,9 @@ test('HTTP UI serves bounded search, local AND/OR graph, evidence and the same d
   try {
     const index = await fetch(base); assert.equal(index.status, 200); assert.match(await index.text(), /AND \/ 候補内は OR/);
     assert.match(index.headers.get('content-security-policy')!, /frame-ancestors 'none'/);
+    const viewport = await fetch(base + '/graph-viewport.js');
+    assert.equal(viewport.status, 200); assert.match(viewport.headers.get('content-type')!, /javascript/);
+    assert.match(await viewport.text(), /export class GraphCamera/);
     const query = async (path: string) => { const response = await fetch(base + path); assert.equal(response.status, 200); return response.json(); };
     const search = await query('/api/search?limit=2&offset=1'); assert.equal(search.schemaVersion, 1); assert.equal(search.result.items.length, 2); assert.equal(search.result.truncated, true);
     const graph = await query('/api/graph?id=minecraft:diamond&depth=2&limit=30');
