@@ -107,7 +107,7 @@ export function applyDefinitions(model: Model, packs: DefinitionPack[], environm
     for (const slot of p.inputs) for (const a of slot.alternatives) {
       if ([a.resource, a.tag, a.predicate].filter(v => v !== undefined).length !== 1) missing.push('Alternative must select exactly one resource, tag or predicate');
       if (a.tag) {
-        if (!(a.tag in m.tags)) missing.push(`Tag not acquired: ${a.tag}`);
+        if (!(a.tag in m.tags)) { a.members = []; missing.push(`Tag not acquired: ${a.tag}`); }
         else {
           // Always expand from this capture; author-supplied membership cannot create supply.
           a.members = [...m.tags[a.tag]!].sort();

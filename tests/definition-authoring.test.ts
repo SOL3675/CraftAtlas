@@ -46,7 +46,7 @@ test('missing references and invented tag members cannot create a route', () => 
   for (const variant of ['resource', 'tag', 'output', 'ambiguous']) {
     const { s, p, sc } = custom(), patch = p.operations[0]!.patch;
     if (variant === 'resource') patch.inputs![0]!.alternatives = [{ resource: 'missing:input' }];
-    if (variant === 'tag') patch.inputs![0]!.alternatives = [{ tag: 'missing:tag', members: ['minecraft:dirt'] }];
+    if (variant === 'tag') patch.inputs![0]!.alternatives = [{ tag: 'missing:tag' }];
     if (variant === 'output') patch.outputs![0]!.resource = 'missing:output';
     if (variant === 'ambiguous') patch.inputs![0]!.alternatives = [{ resource: 'minecraft:dirt', tag: 'atlas:empty', members: [] }];
     const model = applyDefinitions(normalize(s), [p], s);
