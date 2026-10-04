@@ -55,6 +55,8 @@ pnpm atlas cost --snapshot fixtures/definition-progression-snapshot.json --defin
 pnpm atlas serve --snapshot fixtures/definition-progression-snapshot.json --definitions definitions/fixture-progression.json --scenario fixtures/definition-progression-scenario.json --request fixtures/definition-progression-cost-request.json
 ```
 
+Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力・出力・条件を記述できます。独自 serializer の解釈状態、キャプチャに基づくタグ展開、参照検証と coverage の扱いは [定義契約](docs/contracts.md)、Foundry との開発チェックは [開発手順](docs/development.md#mod-acquisition-definitions) を参照してください。未検証の Java hook は unknown を維持します。
+
 性能の測定方法と予算は [性能測定](docs/performance.md) を参照してください。
 
 ## 構成

@@ -1,12 +1,16 @@
 import { diagnostic, semanticHash } from './normalize.ts';
 import { hash } from './hash.ts';
+import { uninterpretedConstraints } from './analyze.ts';
 import { validate, validateModel } from './validate.ts';
 import type { DefinitionPack, Json, Model, Process } from './types.ts';
+
+/** Capability marker for consumers requiring validated references and interpretation patches. */
+export const definitionContractVersion = 2;
 
 export interface DefinitionEnvironment { minecraft: string; loader: string }
 type Operation = DefinitionPack['operations'][number];
 type Proposal = { pack: DefinitionPack; op: Operation; key: string; evidence: string };
-const fields = ['inputs', 'outputs', 'requirements', 'costs', 'unknown', 'execution'] as const;
+const fields = ['inputs', 'outputs', 'requirements', 'costs', 'unknown', 'execution', 'interpretation'] as const;
 const unique = (values: string[]) => [...new Set(values)];
 
 /** Apply a deterministic overlay. Original runtime raw values are never rewritten. */
@@ -44,7 +48,7 @@ export function applyDefinitions(model: Model, packs: DefinitionPack[], environm
     }
     const targets = m.processes.filter(p => (op.selector.id === undefined || p.id === op.selector.id) && (op.selector.type === undefined || p.type === op.selector.type));
     if (!targets.length) { report('definition-selector-empty', key, 'Selector matched no existing process'); continue; }
-    if (op.action === 'append' && op.patch.execution !== undefined) { report('definition-invalid-append', key, 'Scalar execution state requires replace'); continue; }
+    if (op.action === 'append' && (op.patch.execution !== undefined || op.patch.interpretation !== undefined)) { report('definition-invalid-append', key, 'Scalar execution/interpretation state requires replace'); continue; }
     if (op.action === 'disable' && Object.keys(op.patch).length) { report('definition-invalid-disable', key, 'Disable operations cannot contain a field patch'); continue; }
     if (!addEvidence(ev, pack, `${op.evidence}; operations/${op.id}; verified: ${pack.verified.join(', ') || 'none'}`)) continue;
     for (const target of targets) { const values = proposals.get(target.id) ?? []; values.push({ pack, op, key, evidence: ev }); proposals.set(target.id, values); }
@@ -96,6 +100,48 @@ export function applyDefinitions(model: Model, packs: DefinitionPack[], environm
     for (const value of [...p.inputs, ...p.outputs, ...p.requirements]) value.evidence = unique([...value.evidence, ev]);
     m.processes.push(p);
   }
+  // Definition references are checked against captured registries, never invented.
+  const resources = new Set(m.resources.map(r => r.id));
+  for (const p of m.processes.filter(p => p.evidence.some(id => id.startsWith('definition:')))) {
+    const missing: string[] = [];
+    for (const slot of p.inputs) for (const a of slot.alternatives) {
+      if ([a.resource, a.tag, a.predicate].filter(v => v !== undefined).length !== 1) missing.push('Alternative must select exactly one resource, tag or predicate');
+      if (a.tag) {
+        if (!(a.tag in m.tags)) { a.members = []; missing.push(`Tag not acquired: ${a.tag}`); }
+        else {
+          // Always expand from this capture; author-supplied membership cannot create supply.
+          a.members = [...m.tags[a.tag]!].sort();
+          slot.evidence = unique([...slot.evidence, 'runtime:tags']);
+        }
+      }
+      for (const id of a.resource ? [a.resource] : a.members ?? []) if (!resources.has(id)) missing.push(`Resource not acquired: ${id}`);
+    }
+    for (const o of p.outputs) if (!resources.has(o.resource)) missing.push(`Resource not acquired: ${o.resource}`);
+    for (const reason of unique(missing)) {
+      p.unknown = unique([...p.unknown, reason]);
+      report('definition-reference-missing', p.id, reason, p.evidence, 'unknown');
+    }
+  }
+  // Capture coverage remains untouched. Only derived recipe interpretation is rebuilt.
+  // The original model, raw values, field histories and unsupported diagnostics remain evidence.
+  const reasons = (p: Process) => [
+    ...p.unknown, ...p.conflicts, ...uninterpretedConstraints(p),
+    ...(p.interpretation === 'opaque' ? ['Opaque process'] : []),
+    ...(p.execution !== 'executable' ? [`Execution is ${p.execution}`] : []),
+    ...p.requirements.filter(r => r.kind === 'opaque').map(r => `Opaque requirement: ${r.id}`),
+    ...p.inputs.flatMap(slot => slot.alternatives.filter(a => a.predicate !== undefined || a.components !== undefined).map(() => 'Uninterpreted ingredient predicate/components')),
+    ...p.costs.filter(cost => cost.amount === null).map(cost => `Cost not acquired: ${cost.kind}`),
+  ];
+  const coverage = (processes: Process[]) => {
+    const interpreted = processes.filter(p => !reasons(p).length).length;
+    return { status: interpreted === processes.length ? 'complete' as const : 'partial' as const, enumerated: processes.length, interpreted, reasons: unique(processes.flatMap(reasons)) };
+  };
+  const originalIds = new Set(model.processes.map(p => p.id));
+  for (const c of m.coverage.filter(c => c.dataset === 'normalization')) {
+    Object.assign(c, coverage(m.processes.filter(p => p.type === c.type && originalIds.has(p.id))));
+  }
+  const added = m.processes.filter(p => !originalIds.has(p.id));
+  if (added.length) m.coverage.push({ dataset: 'definitions', type: '*', ...coverage(added) });
   m.processes.sort((a, b) => a.id.localeCompare(b.id));
   m.diagnostics.sort((a, b) => a.id.localeCompare(b.id));
   m.contentHash = semanticHash(m);
