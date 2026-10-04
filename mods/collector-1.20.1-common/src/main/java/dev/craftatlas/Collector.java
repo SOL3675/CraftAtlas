@@ -203,7 +203,7 @@ public final class Collector {
                 try (var stream = entry.getValue().open()) { datapackResources.add(entry.getKey().toString(), object("source", entry.getValue().sourcePackId(), "sha256", hash(stream.readAllBytes()))); }
             }
         }
-        if (datapackResources.isEmpty()) throw new IllegalStateException("Required applied recipe/tag resource environment capture enumerated zero resources");
+        if (datapackResources.size() == 0) throw new IllegalStateException("Required applied recipe/tag resource environment capture enumerated zero resources");
         List<String> packs = server.getPackRepository().getSelectedPacks().stream().map(p -> p.getId()).toList();
         return object("datapacks", packs, "datapackResources", datapackResources, "configurationHashes", files, "gameRules", rules,
             "world", object("seed", Long.toString(server.overworld().getSeed()), "difficulty", server.getWorldData().getDifficulty().getSerializedName(),

@@ -11,7 +11,7 @@ public final class ServerDatapacks {
         var manager = server.getResourceManager();
         List<String> selected = server.getPackRepository().getSelectedPacks().stream().map(p -> p.getId()).toList();
         List<String> available = server.getPackRepository().getAvailablePacks().stream().map(p -> p.getId()).toList();
-        List<String> loaded = manager.listPacks().map(p -> p.getName()).toList();
+        List<String> loaded = manager.listPacks().map(p -> p.packId()).toList();
         return DatapackCollector.capture(directory -> {
             var effective = manager.listResources(directory, id -> id.getPath().endsWith(".json"));
             var stacks = manager.listResourceStacks(directory, id -> id.getPath().endsWith(".json"));

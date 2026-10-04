@@ -50,8 +50,8 @@ public final class WorldCollector {
         biomeRegistry.keySet().stream().sorted(Comparator.comparing(Object::toString)).forEach(id -> {
             Biome biome = biomeRegistry.get(id);
             biomes.add(row(id.toString(), "minecraft:biome", () -> object(
-                "generation", encode(BiomeGenerationSettings.CODEC, biome.getGenerationSettings(), ops),
-                "spawns", encode(MobSpawnSettings.CODEC, biome.getMobSettings(), ops),
+                "generation", encode(BiomeGenerationSettings.CODEC.codec(), biome.getGenerationSettings(), ops),
+                "spawns", encode(MobSpawnSettings.CODEC.codec(), biome.getMobSettings(), ops),
                 "climate", object("has_precipitation", biome.hasPrecipitation(), "temperature", biome.getBaseTemperature(),
                     "limitations", array("Applied downfall and temperature modifier require the loader adapter")),
                 "original", encode(Biome.DIRECT_CODEC, biome, ops)), errors));
@@ -66,7 +66,7 @@ public final class WorldCollector {
             List<String> names = new ArrayList<>();
             for (var biome : possible) {
                 String name = biome.unwrapKey().map(key -> key.location().toString()).orElse("inline:" + hash(encode(Biome.DIRECT_CODEC, biome.value(), ops)));
-                names.add(name); generation.add(name, encode(BiomeGenerationSettings.CODEC, generator.getBiomeGenerationSettings(biome), ops));
+                names.add(name); generation.add(name, encode(BiomeGenerationSettings.CODEC.codec(), generator.getBiomeGenerationSettings(biome), ops));
             }
             return object("generator", encode(ChunkGenerator.CODEC, generator, ops),
                 "type", level.dimensionTypeRegistration().unwrapKey().map(key -> key.location().toString()).orElse(null),
