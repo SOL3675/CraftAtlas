@@ -69,3 +69,7 @@ Local cloud Git access is not automatically transferable to hosted CI. Do not co
 For integration, run doctor, inspect/build for each affected target, and its atlas-offline suite, followed by actual game suites when prerequisites are available. Doctor failures for absent Java/backend/display/EULA are environment blockers, not passes. Offline unit tests and successful TypeScript builds do not prove real Minecraft behavior.
 
 Keep English procedural docs and a linked Japanese README. Retain necessary usage, constraints, licenses, and agent instructions; record changes/rationale in commits instead of separate design restatements, migration records, or phase histories. Pushes, PRs, merges, visibility changes, and publication are separate authorized operations.
+
+## Browser UI locales
+
+Add a message catalog in `packages/web/public/locales/<lowercase-language-tag>.js` and register its ID, native language name and import in `locale-catalogs.js`. Copy the keys and `{parameter}` names from `en.js`; English supplies missing translations. Use `data-i18n` (or `data-i18n-aria-label` / `data-i18n-placeholder`) for static UI and `msg` with `localize` for dynamic text so switching updates existing nodes. Keep captured names, identifiers and raw evidence unchanged. Run the locale tests and check loaded views in the browser, including graph controls, layout and accessible names.
