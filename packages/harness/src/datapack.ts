@@ -5,13 +5,14 @@ import type { Json, Snapshot } from '../../core/src/types.ts';
 /** Required server-suite assertions; these only run after a real game dump. */
 export function verifyDatapackFixture(snapshot: Snapshot, expectedStick: Json, embeddedMod: string) {
   const data = snapshot.datapack; assert.ok(data, 'Server collector must publish raw datapack.json');
-  assert.ok(data.directories.includes('recipe'));
+  const directory = snapshot.minecraft === '1.20.1' ? 'recipes' : 'recipe';
+  assert.ok(data.directories.includes(directory));
   assert.ok(data.resources.length > 100, 'Active recipes must be enumerated independently of a viewer');
-  const stick = data.resources.find(r => r.id === 'minecraft:recipe/stick.json'); assert.ok(stick);
+  const stick = data.resources.find(r => r.id === `minecraft:${directory}/stick.json`); assert.ok(stick);
   assert.deepEqual(stick.effective.data, expectedStick);
   assert.ok(stick.stack.length >= 2, 'Vanilla and world override must both retain provenance');
   assert.ok(stick.stack.some(v => v.sha256 !== stick.effective.sha256));
-  const embedded = data.resources.filter(r => r.id.startsWith(`${embeddedMod}:recipe/`));
+  const embedded = data.resources.filter(r => r.id.startsWith(`${embeddedMod}:${directory}/`));
   assert.ok(embedded.length > 0, `Raw embedded ${embeddedMod} recipe resources are required`);
   assert.ok(embedded.some(r => r.effective.source !== stick.effective.source), 'Mod pack provenance must survive a world override');
   assert.ok(snapshot.coverage.some(c => c.dataset === 'datapack' && c.status === 'complete'));

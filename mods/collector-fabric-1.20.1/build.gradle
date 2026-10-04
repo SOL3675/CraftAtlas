@@ -1,0 +1,51 @@
+plugins { id 'fabric-loom' version '1.8.13'; id 'java-library' }
+version = project.mod_version
+group = 'dev.craftatlas'
+base { archivesName = 'craft-atlas-collector-fabric-1.20.1' }
+repositories { mavenCentral(); maven { url = 'https://maven.terraformersmc.com/releases/' } }
+configurations { distributionMods { transitive = false } }
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    modCompileOnly 'dev.emi:emi-fabric:1.1.24+1.20.1'
+    distributionMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    distributionMods 'dev.emi:emi-fabric:1.1.24+1.20.1'
+}
+processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
+ext.harnessExportSpec = [
+    target: 'fabric-1.20.1', loader: 'fabric', java: 17, declaredMinecraft: project.minecraft_version,
+    artifactTasks: ['remapJar', 'copyRuntimeDependencies', 'copySharedSources', 'embeddedFixtureJar'],
+    resolved: {
+        def dependency = configurations.modImplementation.incoming.resolutionResult.allComponents.find {
+            it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier && it.id.group == 'net.fabricmc' && it.id.module == 'fabric-loader'
+        }
+        if (dependency == null) throw new GradleException('Cannot resolve Fabric Loader')
+        [minecraft: loom.minecraftProvider.minecraftVersion(), loaderVersion: dependency.id.version, mappings: 'mojang:' + loom.minecraftProvider.minecraftVersion()]
+    },
+    artifacts: { [[file: tasks.remapJar.archiveFile.get().asFile, kind: 'distribution', side: 'both'], [file: tasks.embeddedFixtureJar.archiveFile.get().asFile, kind: 'runtime-dependency', side: 'both']] + configurations.distributionMods.resolvedConfiguration.resolvedArtifacts.collect {
+        [file: layout.buildDirectory.file('pack/' + it.file.name).get().asFile, kind: 'runtime-dependency', side: it.moduleVersion.id.group == 'dev.emi' ? 'client' : 'both']
+    } },
+    classpath: { sourceSets.main.compileClasspath.files }, sources: ['src/main/java', 'build/shared/java']
+]
+java { toolchain.languageVersion = JavaLanguageVersion.of(17); withSourcesJar() }
+tasks.withType(JavaCompile).configureEach { options.release = 17; options.encoding = 'UTF-8' }
+tasks.withType(AbstractArchiveTask).configureEach { preserveFileTimestamps = false; reproducibleFileOrder = true }
+tasks.withType(Jar).configureEach { from('../../LICENSE') { into 'META-INF' } }
+tasks.register('copySharedSources', Copy) {
+    from('../collector-1.20.1-common/src/main/java')
+    from('../collector/src/main/java') { include 'dev/craftatlas/JsonFiles.java', 'dev/craftatlas/DatapackCollector.java' }
+    into layout.buildDirectory.dir('shared/java')
+}
+sourceSets.main.java.srcDir(layout.buildDirectory.dir('shared/java'))
+tasks.named('compileJava') { dependsOn 'copySharedSources' }
+tasks.named('sourcesJar') { dependsOn 'copySharedSources' }
+tasks.register('copyRuntimeDependencies', Copy) { from configurations.distributionMods; into layout.buildDirectory.dir('pack') }
+apply from: 'gradle/harness-export.gradle'
+tasks.register('embeddedFixtureJar', Jar) {
+    archiveBaseName = 'atlas-embedded-fixture-fabric-1.20.1'
+    archiveClassifier = ''
+    from('../../fixtures/embedded-1.20.1')
+    from('src/test/embedded')
+}

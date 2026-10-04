@@ -18,7 +18,12 @@ public final class DatapackCollector {
     public interface Source { Map<String, ResourceStack> list(String directory) throws IOException; }
 
     public static List<String> directories(String custom) {
-        TreeSet<String> directories = new TreeSet<>(); directories.add("recipe");
+        return directories("recipe", custom);
+    }
+
+    public static List<String> directories(String recipeDirectory, String custom) {
+        if (!List.of("recipe", "recipes").contains(recipeDirectory)) throw new IllegalArgumentException("Unsupported recipe directory: " + recipeDirectory);
+        TreeSet<String> directories = new TreeSet<>(); directories.add(recipeDirectory);
         if (!custom.isBlank()) for (String value : custom.split(",", -1)) {
             String directory = value.trim();
             if (!directory.matches("[a-z0-9_-]+(?:/[a-z0-9_-]+)*")) throw new IllegalArgumentException("Invalid craftatlas.resourceDirectories entry: " + value);
@@ -29,7 +34,12 @@ public final class DatapackCollector {
 
     public static JsonObject capture(Source source, List<String> selected, List<String> loaded, List<String> available,
                                      String custom, JsonArray coverage, JsonArray errors) {
-        List<String> directories = directories(custom);
+        return capture(source, selected, loaded, available, "recipe", custom, coverage, errors);
+    }
+
+    public static JsonObject capture(Source source, List<String> selected, List<String> loaded, List<String> available,
+                                     String recipeDirectory, String custom, JsonArray coverage, JsonArray errors) {
+        List<String> directories = directories(recipeDirectory, custom);
         TreeMap<String, ResourceStack> resources = new TreeMap<>();
         boolean failed = false; JsonArray failures = new JsonArray();
         for (String directory : directories) try { resources.putAll(source.list(directory)); }

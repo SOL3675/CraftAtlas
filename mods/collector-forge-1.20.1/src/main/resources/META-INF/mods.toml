@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="craftatlas"
+version="${version}"
+displayName="Craft Atlas Collector"
+description="Runtime snapshots for offline recipe and progression analysis."
+[[dependencies.craftatlas]]
+modId="forge"
+mandatory=true
+versionRange="[47.3.0,48)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.craftatlas]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1]"
+ordering="NONE"
+side="BOTH"

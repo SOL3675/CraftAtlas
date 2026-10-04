@@ -5,10 +5,11 @@ import { normalizeTechReborn, techRebornAdapter } from './techreborn.ts';
 import { validateSnapshot, validateModel } from './validate.ts';
 import { capturedRecipes, datapackRecipeId } from './datapack.ts';
 import type { Alternative, Diagnostic, Json, Model, Process, RawRecipe, Slot, Snapshot } from './types.ts';
-export const NORMALIZER_VERSION = '0.3.0';
+export const NORMALIZER_VERSION = '0.4.0';
 export const adapters = [
   techRebornAdapter,
-  { id: 'vanilla', version: '1', minecraft: ['1.21.1'], loaders: ['neoforge', 'fabric'], types: ['minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'minecraft:smelting', 'minecraft:blasting', 'minecraft:smoking', 'minecraft:campfire_cooking', 'minecraft:stonecutting', 'minecraft:smithing_transform'], limitations: ['dynamic recipes', 'custom predicates'] },
+  { id: 'vanilla', version: '2', minecraft: ['1.21.1'], loaders: ['neoforge', 'fabric'], types: ['minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'minecraft:smelting', 'minecraft:blasting', 'minecraft:smoking', 'minecraft:campfire_cooking', 'minecraft:stonecutting', 'minecraft:smithing_transform'], limitations: ['dynamic recipes', 'custom predicates'] },
+  { id: 'vanilla', version: '2', minecraft: ['1.20.1'], loaders: ['forge', 'fabric'], types: ['minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'minecraft:smelting', 'minecraft:blasting', 'minecraft:smoking', 'minecraft:campfire_cooking', 'minecraft:stonecutting', 'minecraft:smithing_transform'], limitations: ['dynamic recipes', 'custom predicates'] },
   { id: 'mekanism-enriching', version: '1', minecraft: ['1.21.1'], loaders: ['neoforge'], mod: 'mekanism', versions: ['10.7.14'], types: ['mekanism:enriching'], limitations: ['energy depends on machine upgrades/configuration', 'other Mekanism recipe types', 'chemical ingredients'] },
 ];
 export function diagnostic(m: Pick<Model, 'snapshotId'>, rule: string, target: string, message: string, severity: Diagnostic['severity'] = 'warning', status: Diagnostic['status'] = 'confirmed', evidence: string[] = []): Diagnostic {
@@ -19,7 +20,7 @@ function alternatives(value: any, tags: Record<string, string[]>): Alternative[]
   if (typeof value === 'string') return [{ resource: value }];
   if (value && typeof value === 'object') {
     if (value.type && !['minecraft:item', 'minecraft:tag'].includes(value.type)) return [{ predicate: value }];
-    if (value.item) return [{ resource: value.item, ...(value.components ? { components: value.components } : {}) }];
+    if (value.item) return [{ resource: value.item, ...(value.components ? { components: value.components } : {}), ...(value.nbt ? { components: { nbt: value.nbt } } : {}) }];
     if (value.tag) return [{ tag: value.tag, members: tags[value.tag] ?? [] }];
   }
   return [{ predicate: value ?? { unknown: true } }];
@@ -29,23 +30,23 @@ export function normalize(snapshot: Snapshot): Model {
   const m: Model = { schemaVersion: 1, snapshotId: s.id, session: s.session, generation: s.generation, normalizerVersion: NORMALIZER_VERSION, environment: s.environment, mods: s.mods, resources: structuredClone(s.resources), tags: structuredClone(s.tags), processes: [], evidence: [], coverage: structuredClone(s.coverage), diagnostics: [], contentHash: '' };
   if (s.datapack) m.datapack = structuredClone(s.datapack);
   const { recipes, sources, dataOnly } = capturedRecipes(s);
-  const customResources = (s.datapack?.resources ?? []).filter(r => !datapackRecipeId(r));
+  const customResources = (s.datapack?.resources ?? []).filter(r => !datapackRecipeId(r, s.minecraft));
   if (customResources.length) m.coverage.push({ dataset: 'datapackInterpretation', type: 'custom-directories', status: 'unsupported', enumerated: customResources.length, interpreted: 0, reasons: ['Custom resource APIs and acquisition semantics have no adapter; raw capture cannot close acquisition coverage'] });
   for (const resource of s.datapack?.resources ?? []) {
     if (resource.effective.error) m.diagnostics.push(diagnostic(m, 'datapack-resource-error', resource.id, resource.effective.error, 'warning', 'unknown'));
     for (const [index, variant] of resource.stack.entries()) if (variant.error) m.diagnostics.push(diagnostic(m, 'datapack-resource-error', `${resource.id}/stack/${index}`, `${variant.source}: ${variant.error}`, 'warning', 'unknown'));
   }
-  for (const kind of new Set(['item', 'fluid', ...s.resources.map(r => r.kind)])) m.evidence.push({ id: `runtime:registry:${kind}`, kind: 'runtime', source: s.id, adapter: `${s.loader}-registry-1.21.1`, pointer: `resources/${kind}` });
-  m.evidence.push({ id: 'runtime:tags', kind: 'runtime', source: s.id, adapter: `${s.loader}-tags-1.21.1`, pointer: 'tags' });
+  for (const kind of new Set(['item', 'fluid', ...s.resources.map(r => r.kind)])) m.evidence.push({ id: `runtime:registry:${kind}`, kind: 'runtime', source: s.id, adapter: `${s.loader}-registry-${s.minecraft}`, pointer: `resources/${kind}` });
+  m.evidence.push({ id: 'runtime:tags', kind: 'runtime', source: s.id, adapter: `${s.loader}-tags-${s.minecraft}`, pointer: 'tags' });
   for (const r of recipes.sort((a, b) => a.id.localeCompare(b.id))) {
     const ev = dataOnly.has(r.id) ? `datapack:${r.id}` : `runtime:${r.id}`;
-    const p: Process = { id: r.id, sourceId: r.id, type: r.type, inputs: [], outputs: [], requirements: [], evidence: [ev], interpretation: 'supported', execution: 'executable', unknown: [], enabled: true, costs: [], raw: r.data, fieldEvidence: {}, conflicts: [] };
+    const p: Process = { id: r.id, sourceId: r.id, type: r.type, inputs: [], outputs: [], requirements: [], evidence: [ev], interpretation: 'supported', execution: 'executable', unknown: [], enabled: true, costs: [], raw: r.serialization ? { data: r.data, serialization: { ...r.serialization } } : r.data, fieldEvidence: {}, conflicts: [] };
     const adapter = adapters.find(a => a.types.includes(r.type) && a.minecraft.includes(s.minecraft) && a.loaders.includes(s.loader) && (!('mod' in a) || s.mods.some(mod => mod.id === a.mod && a.versions?.includes(mod.version))));
-    m.evidence.push({ id: ev, kind: 'runtime', source: s.id, adapter: dataOnly.has(r.id) ? 'datapack-resource-1.21.1' : adapter?.id ?? 'opaque', pointer: dataOnly.has(r.id) ? `datapack/resources/${sources.get(r.id)!.id}/effective` : `recipes/${r.id}` });
+    m.evidence.push({ id: ev, kind: 'runtime', source: s.id, adapter: dataOnly.has(r.id) ? `datapack-resource-${s.minecraft}` : adapter?.id ?? 'opaque', pointer: dataOnly.has(r.id) ? `datapack/resources/${sources.get(r.id)!.id}/effective` : `recipes/${r.id}` });
     if (sources.has(r.id) && !dataOnly.has(r.id)) {
       const source = sources.get(r.id)!;
       const sourceEvidence = `datapack:${r.id}`;
-      m.evidence.push({ id: sourceEvidence, kind: 'runtime', source: s.id, adapter: 'datapack-resource-1.21.1', pointer: `datapack/resources/${source.id}/effective` });
+      m.evidence.push({ id: sourceEvidence, kind: 'runtime', source: s.id, adapter: `datapack-resource-${s.minecraft}`, pointer: `datapack/resources/${source.id}/effective` });
       p.evidence.push(sourceEvidence); p.fieldEvidence.datapack = [sourceEvidence];
       if (source.effective.error) p.unknown.push(`Datapack resource error: ${source.effective.error}`);
       const sourceData = source.effective.data;
@@ -60,9 +61,10 @@ export function normalize(snapshot: Snapshot): Model {
     try {
       if (dataOnly.has(r.id)) {
         p.execution = 'unconfirmed';
+        m.diagnostics.push(diagnostic(m, 'recipe-runtime-missing', r.id, 'Captured recipe resource is absent from RecipeManager; registration and execution remain unconfirmed', 'info', 'unknown', [ev]));
         throw new Error('Resource is absent from RecipeManager; conditions, rejection or a custom recipe API may apply. Executability is unconfirmed');
       }
-      if (!adapter || !r.data || r.error) throw new Error(r.error ?? 'Unsupported recipe type/version');
+      if (!adapter || !r.data || r.error || r.serialization?.error) throw new Error(r.error ?? r.serialization?.error ?? 'Unsupported recipe type/version');
       const data = r.data as any;
       const add = (ingredient: any, amount = 1) => {
         if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid ingredient amount');
@@ -77,7 +79,7 @@ export function normalize(snapshot: Snapshot): Model {
           if (!(symbol in data.key)) throw new Error(`Missing shaped key ${symbol}`); add(data.key[symbol]);
         }
       } else if (r.type === 'minecraft:crafting_shapeless') { if (!Array.isArray(data.ingredients) || data.ingredients.length < 1 || data.ingredients.length > 9) throw new Error('Invalid shapeless ingredients'); for (const ingredient of data.ingredients) add(ingredient); }
-      else if (r.type === 'minecraft:smithing_transform') { add(data.template); add(data.base); add(data.addition); p.unknown.push('Output inherits base components'); }
+      else if (r.type === 'minecraft:smithing_transform') { add(data.template); add(data.base); add(data.addition); p.unknown.push(s.minecraft === '1.20.1' ? 'Output inherits base NBT' : 'Output inherits base components'); }
       else if (r.type === 'mekanism:enriching') {
         add(data.input.ingredient ?? data.input, data.input.count ?? data.input.amount ?? 1);
         p.requirements.push({ kind: 'equipment', id: 'mekanism:enrichment_chamber', evidence: [ev] }, { kind: 'opaque', id: 'Mekanism power supply and configured energy demand', evidence: [ev] });
@@ -88,7 +90,7 @@ export function normalize(snapshot: Snapshot): Model {
         const result = data.result ?? data.output;
         const resource = typeof result === 'string' ? result : result?.id ?? result?.item;
         if (!resource || !Number.isFinite(result?.count ?? data.count ?? 1) || (result?.count ?? data.count ?? 1) <= 0) throw new Error('Missing or invalid result');
-        p.outputs.push({ resource, amount: result?.count ?? data.count ?? 1, unit: 'item', role: 'primary', probability: 1, evidence: [ev], ...(result?.components ? { components: result.components } : {}) });
+        p.outputs.push({ resource, amount: result?.count ?? data.count ?? 1, unit: 'item', role: 'primary', probability: 1, evidence: [ev], ...(result?.components ? { components: result.components } : {}), ...(result?.nbt ? { components: { nbt: result.nbt } } : {}) });
       }
       const machine: Record<string, string> = { 'minecraft:smelting': 'minecraft:furnace', 'minecraft:blasting': 'minecraft:blast_furnace', 'minecraft:smoking': 'minecraft:smoker', 'minecraft:campfire_cooking': 'minecraft:campfire', 'minecraft:stonecutting': 'minecraft:stonecutter', 'minecraft:smithing_transform': 'minecraft:smithing_table', 'minecraft:crafting_shaped': 'minecraft:crafting_table', 'minecraft:crafting_shapeless': 'minecraft:crafting_table' };
       const smallCraft = r.type === 'minecraft:crafting_shapeless' && p.inputs.length <= 4 || r.type === 'minecraft:crafting_shaped' && data.pattern.length <= 2 && data.pattern.every((row: string) => row.length <= 2);
@@ -97,9 +99,11 @@ export function normalize(snapshot: Snapshot): Model {
         p.costs.push({ kind: 'time', amount: data.cookingtime, unit: 'tick', basis: 'runtime-definition' });
         if (r.type !== 'minecraft:campfire_cooking') p.requirements.push({ kind: 'opaque', id: 'fuel supply and burn duration', evidence: [ev] });
       }
-      if (data['neoforge:conditions']) p.requirements.push({ kind: 'opaque', id: JSON.stringify(data['neoforge:conditions']), evidence: [ev] });
+      for (const key of ['neoforge:conditions', 'forge:conditions', 'fabric:load_conditions']) if (data[key]) p.requirements.push({ kind: 'opaque', id: JSON.stringify(data[key]), evidence: [ev] });
+      if (s.minecraft === '1.20.1' && (data.result?.nbt || data.output?.nbt)) p.unknown.push('Output NBT is retained; NBT matching and mutations are not interpreted');
       for (const input of p.inputs) for (const a of input.alternatives) {
         if (a.predicate) p.unknown.push('Custom ingredient predicate');
+        if (s.minecraft === '1.20.1' && a.components) p.unknown.push('Ingredient NBT/components matching is not interpreted');
         if (a.tag && !(a.tag in s.tags)) p.unknown.push(`Tag not acquired: ${a.tag}`);
         if (a.tag && !input.evidence.includes('runtime:tags')) input.evidence.push('runtime:tags');
       }

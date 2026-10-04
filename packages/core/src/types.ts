@@ -15,7 +15,8 @@ export interface Process {
   fieldHistory?: Record<string, { value: Json; evidence: string[] }[]>;
 }
 export interface Coverage { dataset: string; type: string; status: 'complete' | 'partial' | 'unsupported' | 'failed'; enumerated: number | null; interpreted: number | null; reasons: string[] }
-export interface RawRecipe { id: string; type: string; data: Json | null; error?: string }
+export interface RecipeSerialization { encoding: 'recipe-network-1.20.1'; bytesBase64?: string; sha256?: string; error?: string; limitations: string[] }
+export interface RawRecipe { id: string; type: string; data: Json | null; error?: string; serialization?: RecipeSerialization }
 export interface DatapackVariant {
   source: string; data: Json; sha256?: string; text?: string; bytesBase64?: string; error?: string;
 }

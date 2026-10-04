@@ -10,7 +10,10 @@ function meaning(p: Process) {
 }
 /** The same checked-in datapack has identical meaning across loaders, without loader-specific Mods. */
 export function verifyCommonFixture(snapshot: Snapshot, root: string) {
-  const data = JSON.parse(readFileSync(join(root,'fixtures/datapack/data/atlas/recipe/added.json'),'utf8'));
+  const fixtureRoot = snapshot.minecraft === '1.20.1' ? 'fixtures/datapack-1.20.1' : 'fixtures/datapack';
+  const recipeDir = snapshot.minecraft === '1.20.1' ? 'recipes' : 'recipe';
+  const itemDir = snapshot.minecraft === '1.20.1' ? 'items' : 'item';
+  const data = JSON.parse(readFileSync(join(root,fixtureRoot,`data/atlas/${recipeDir}/added.json`),'utf8'));
   const scope = { ...structuredClone(snapshot), viewer:undefined, world:undefined, datapack:undefined,
     coverage: snapshot.coverage.filter(c=>['registry','tags','recipes'].includes(c.dataset)),
     recipes:snapshot.recipes.filter(r=>r.id==='atlas:added') };
@@ -19,7 +22,7 @@ export function verifyCommonFixture(snapshot: Snapshot, root: string) {
   const expected = expectedModel.processes.find(p => p.id==='atlas:added')!;
   const actual = actualModel.processes.find(p => p.id==='atlas:added'); assert.ok(actual);
   assert.equal(actual.interpretation,'supported'); assert.deepEqual(meaning(actual),meaning(expected));
-  const tag = JSON.parse(readFileSync(join(root,'fixtures/datapack/data/atlas/tags/item/alternatives.json'),'utf8'));
+  const tag = JSON.parse(readFileSync(join(root,fixtureRoot,`data/atlas/tags/${itemDir}/alternatives.json`),'utf8'));
   assert.deepEqual([...snapshot.tags['atlas:alternatives']].sort(),[...tag.values].sort());
   const checks = {schemaVersion:1 as const,recipes:['atlas:added','atlas:missing_contract'],nonemptyTags:['atlas:alternatives','atlas:missing_tag_contract'],supportedTypes:[],reachable:[],unreachable:[]};
   const diagnostics = audit(actualModel,checks);

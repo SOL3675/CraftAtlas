@@ -126,6 +126,37 @@
           "error": {
             "type": "string",
             "minLength": 1
+          },
+          "serialization": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "encoding": {
+                "const": "recipe-network-1.20.1"
+              },
+              "bytesBase64": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "error": {
+                "type": "string",
+                "minLength": 1
+              },
+              "limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "encoding",
+              "limitations"
+            ]
           }
         },
         "required": [

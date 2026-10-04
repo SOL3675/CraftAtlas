@@ -1,9 +1,14 @@
 import { bytesHash, hash } from './hash.ts';
 import type { DatapackData, DatapackResource, RawRecipe, Snapshot } from './types.ts';
 
-/** Only the standard 1.21.1 recipe directory has a known ID convention. */
-export function datapackRecipeId(resource: DatapackResource): string | undefined {
-  const match = /^([^:]+):recipe\/(.+)\.json$/.exec(resource.id);
+/** Explicit supported version boundaries; custom directories have no guessed ID convention. */
+export function recipeDirectory(minecraft: string): string | undefined {
+  return minecraft === "1.20.1" ? "recipes" : minecraft === "1.21.1" ? "recipe" : undefined;
+}
+export function datapackRecipeId(resource: DatapackResource, minecraft = '1.21.1'): string | undefined {
+  const directory = recipeDirectory(minecraft);
+  if (!directory) return undefined;
+  const match = new RegExp(`^([^:]+):${directory}/(.+)\\.json$`).exec(resource.id);
   return match ? `${match[1]}:${match[2]}` : undefined;
 }
 export function validateDatapack(data: DatapackData | undefined) {
@@ -23,7 +28,7 @@ export function capturedRecipes(s: Snapshot): { recipes: RawRecipe[]; sources: M
   const recipes = [...s.recipes], ids = new Set(recipes.map(r => r.id));
   const sources = new Map<string, DatapackResource>(), dataOnly = new Set<string>();
   for (const resource of s.datapack?.resources ?? []) {
-    const id = datapackRecipeId(resource); if (!id) continue;
+    const id = datapackRecipeId(resource, s.minecraft); if (!id) continue;
     sources.set(id, resource);
     if (ids.has(id)) continue;
     const variant = resource.effective;

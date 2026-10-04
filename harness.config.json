@@ -50,6 +50,56 @@
       "minecraft": "1.21.1",
       "loader": "fabric",
       "loaderVersion": "0.16.14"
+    },
+    "fabric-1.20.1": {
+      "minecraft": "1.20.1",
+      "loader": "fabric",
+      "loaderVersion": "0.16.14",
+      "java": {
+        "gradle": "java21",
+        "toolchain": 17,
+        "game": "java17"
+      },
+      "build": "collector-fabric-1.20.1",
+      "tasks": {
+        "build": [
+          "build"
+        ],
+        "inspect": [
+          "harnessExport"
+        ]
+      },
+      "artifactManifest": "build/harness/fabric-1.20.1.json",
+      "requiredSuites": [
+        "atlas-1.20.1-server",
+        "atlas-1.20.1-emi",
+        "atlas-offline"
+      ]
+    },
+    "forge-1.20.1": {
+      "minecraft": "1.20.1",
+      "loader": "forge",
+      "loaderVersion": "47.3.0",
+      "java": {
+        "gradle": "java17",
+        "toolchain": 17,
+        "game": "java17"
+      },
+      "build": "collector-forge-1.20.1",
+      "tasks": {
+        "build": [
+          "build"
+        ],
+        "inspect": [
+          "harnessExport"
+        ]
+      },
+      "artifactManifest": "build/harness/forge-1.20.1.json",
+      "requiredSuites": [
+        "atlas-1.20.1-server",
+        "atlas-1.20.1-jei",
+        "atlas-offline"
+      ]
     }
   },
   "builds": {
@@ -62,6 +112,16 @@
       "adapter": "gradle",
       "root": "mods/collector-fabric",
       "java": "java21"
+    },
+    "collector-fabric-1.20.1": {
+      "adapter": "gradle",
+      "root": "mods/collector-fabric-1.20.1",
+      "java": "java21"
+    },
+    "collector-forge-1.20.1": {
+      "adapter": "gradle",
+      "root": "mods/collector-forge-1.20.1",
+      "java": "java17"
     }
   },
   "projectId": "craft-atlas",
@@ -172,6 +232,53 @@
           "{target}"
         ]
       }
+    },
+    "atlas-1.20.1-server": {
+      "kind": "server",
+      "capabilities": [
+        "dedicated-server"
+      ],
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/server-1.20.1.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      }
+    },
+    "atlas-1.20.1-jei": {
+      "kind": "client",
+      "capabilities": [
+        "integrated-server",
+        "jei-runtime"
+      ],
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/client-1.20.1.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      }
+    },
+    "atlas-1.20.1-emi": {
+      "kind": "client",
+      "capabilities": [
+        "integrated-server",
+        "emi-runtime"
+      ],
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/client-1.20.1.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      }
     }
   },
   "schemaVersion": 1,
@@ -267,6 +374,54 @@
         "atlas.worldgen",
         "atlas.observation",
         "atlas.world-stopped"
+      ]
+    },
+    "atlas-1.20.1-server": {
+      "runtime": "atlas-1.20.1-server",
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 4,
+      "expectedTests": [
+        "atlas.snapshot",
+        "atlas.reload",
+        "atlas.failure-fixture",
+        "atlas.stopped"
+      ],
+      "requiredCapabilities": [
+        "dedicated-server"
+      ]
+    },
+    "atlas-1.20.1-jei": {
+      "runtime": "atlas-1.20.1-jei",
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 3,
+      "expectedTests": [
+        "atlas.integrated",
+        "atlas.jei",
+        "atlas.client-stopped"
+      ],
+      "requiredCapabilities": [
+        "integrated-server",
+        "jei-runtime"
+      ]
+    },
+    "atlas-1.20.1-emi": {
+      "runtime": "atlas-1.20.1-emi",
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 3,
+      "expectedTests": [
+        "atlas.integrated",
+        "atlas.emi",
+        "atlas.client-stopped"
+      ],
+      "requiredCapabilities": [
+        "integrated-server",
+        "emi-runtime"
       ]
     }
   }
