@@ -492,6 +492,134 @@
         "coverage"
       ]
     },
+    "datapack": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "directories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "selectedPacks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "loadedPacks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "disabledPacks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "effective": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "data": {},
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "bytesBase64": {
+                    "type": "string"
+                  },
+                  "error": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "source",
+                  "data"
+                ]
+              },
+              "stack": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "data": {},
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "bytesBase64": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "effective",
+              "stack"
+            ]
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "directories",
+        "selectedPacks",
+        "loadedPacks",
+        "disabledPacks",
+        "resources",
+        "limitations"
+      ]
+    },
     "world": {
       "type": "object",
       "additionalProperties": false,

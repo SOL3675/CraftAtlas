@@ -170,6 +170,13 @@ public final class Collector {
         JsonObject world = WorldCollector.capture(server, coverage, errors); NeoWorldHooks.supplement(server, world, coverage, errors);
         State current = state(server); synchronized(current) { world.add("observations", current.observations.deepCopy()); }
         if (viewer == null) coverage.add(coverage("viewer", "jei", "unsupported", null, null, array("Server-only capture; use integrated client /craftatlas-client dump after JEI runtime is ready")));
+        JsonObject datapack;
+        try { datapack = ServerDatapacks.capture(server, coverage, errors); }
+        catch (Exception error) {
+            String reason = "Raw datapack capture failed: " + error; errors.add(reason);
+            datapack = null;
+            coverage.add(coverage("datapack", "recipe+configured directories", "failed", null, null, array(reason)));
+        }
         JsonArray mods = new JsonArray();
         ModList.get().getMods().stream().sorted(Comparator.comparing(m -> m.getModId())).forEach(m -> mods.add(object("id", m.getModId(), "version", m.getVersion().toString())));
         JsonObject environment;
@@ -189,9 +196,10 @@ public final class Collector {
             "collectorVersion", ModList.get().getModContainerById("craftatlas").orElseThrow().getModInfo().getVersion().toString(),
             "mods", mods, "environment", environment, "resources", resources, "tags", tags, "recipes", recipes, "coverage", coverage, "world", world,
             "completion", object("status", errors.isEmpty() ? "complete" : "partial", "errors", errors));
+        if (datapack != null) snapshot.add("datapack", datapack);
         if (viewer != null) snapshot.add("viewer", viewer);
         snapshot.addProperty("id", hash(object("resources", resources, "tags", tags, "recipes", recipes, "environment", environment, "mods", mods,
-            "viewer", viewer, "world", world)).substring(0, 24));
+            "viewer", viewer, "world", world, "datapack", datapack)).substring(0, 24));
         return snapshot;
     }
     private static <T> void registry(Registry<T> registry, String kind, String prefix, JsonArray resources, JsonObject tags) {

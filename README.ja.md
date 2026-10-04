@@ -57,6 +57,8 @@ pnpm atlas serve --snapshot fixtures/definition-progression-snapshot.json --defi
 
 Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力・出力・条件を記述できます。独自 serializer の解釈状態、キャプチャに基づくタグ展開、参照検証と coverage の扱いは [定義契約](docs/contracts.md)、Foundry との開発チェックは [開発手順](docs/development.md#mod-acquisition-definitions) を参照してください。未検証の Java hook は unknown を維持します。
 
+サーバーのダンプでは、JEI/EMI を使わずに、有効な Mod 同梱データパックのレシピ JSON 原本と上書きの由来も保存します。`atlas datapack` で確認できます。任意のカスタム JSON ディレクトリの収集設定と定義の作成方法は [使い方](docs/usage.md#fixed-collectors) を参照してください。原本の収集は、レシピの登録や実行可能性を証明するものではありません。
+
 性能の測定方法と予算は [性能測定](docs/performance.md) を参照してください。
 
 ## 構成

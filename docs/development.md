@@ -47,6 +47,8 @@ When adding a serializer, machine, trade or code-controlled item source, first i
 
 Run `pnpm check`, `pnpm test`, and `pnpm build` after authoring changes. `tests/definition-authoring.test.ts` exercises both 1.21.1 loaders, conditional custom serializer mapping, missing inputs, missing references, conflicts and incomplete captures. Add/update an equivalent positive route and missing-prerequisite regression for each new mechanism. Keep dynamic hooks unknown when their actual conditions cannot be verified.
 
+`tests/datapack.test.ts` covers raw-resource overlays, unknown serializers, malformed data, manifests/SQLite/CLI and definition interaction. To exercise the shared Java capture/parser against an embedded archive plus overrides without Minecraft, run `node scripts/check-collector-datapack.ts --gson <existing-gson.jar>` with Java/JDK 21 on PATH. A JRE can instead use `--ecj <existing-ecj.jar>` (ECJ 3.38.0 tested). The script downloads nothing and simulates the ResourceManager boundary; it does not prove either loader's integration. Target inspect/build and actual game captures remain necessary for that boundary.
+
 For the Foundry development workflow, use its [survival suite](https://github.com/SOL3675/CraftFoundry/blob/dev/docs/survival.md). Until this Atlas commit is published and selected by a reviewed Foundry gitlink, run from the Foundry checkout:
 
 ```console

@@ -11,7 +11,7 @@ function meaning(p: Process) {
 /** The same checked-in datapack has identical meaning across loaders, without loader-specific Mods. */
 export function verifyCommonFixture(snapshot: Snapshot, root: string) {
   const data = JSON.parse(readFileSync(join(root,'fixtures/datapack/data/atlas/recipe/added.json'),'utf8'));
-  const scope = { ...structuredClone(snapshot), viewer:undefined, world:undefined,
+  const scope = { ...structuredClone(snapshot), viewer:undefined, world:undefined, datapack:undefined,
     coverage: snapshot.coverage.filter(c=>['registry','tags','recipes'].includes(c.dataset)),
     recipes:snapshot.recipes.filter(r=>r.id==='atlas:added') };
   const expectedModel = normalize({ ...scope, recipes:[{id:'atlas:added',type:data.type,data}] });

@@ -1,4 +1,6 @@
 package dev.craftatlas.fabric;
+
+import dev.craftatlas.ServerDatapacks;
 import dev.craftatlas.WorldCollector;
 import dev.craftatlas.JsonFiles;
 
@@ -169,6 +171,13 @@ public final class Collector {
         JsonObject world = WorldCollector.capture(server, coverage, errors);
         coverage.add(coverage("lootModifiers", "fabric", "unsupported", null, null, array("Fabric API has no Global Loot Modifier registry; code-driven loot hooks remain unknown")));
         if (viewer == null) coverage.add(coverage("viewer", "emi", "unsupported", null, null, array("Server-only capture; use integrated client /craftatlas-client dump after EMI runtime is ready")));
+        JsonObject datapack;
+        try { datapack = ServerDatapacks.capture(server, coverage, errors); }
+        catch (Exception error) {
+            String reason = "Raw datapack capture failed: " + error; errors.add(reason);
+            datapack = null;
+            coverage.add(coverage("datapack", "recipe+configured directories", "failed", null, null, array(reason)));
+        }
         JsonArray mods = new JsonArray();
         FabricLoader.getInstance().getAllMods().stream().sorted(Comparator.comparing(m -> m.getMetadata().getId())).forEach(m -> mods.add(object("id", m.getMetadata().getId(), "version", m.getMetadata().getVersion().getFriendlyString())));
         JsonObject environment;
@@ -190,9 +199,10 @@ public final class Collector {
             "completion", object("status", errors.isEmpty() ? "complete" : "partial", "errors", errors));
         synchronized(state(server)) { world.add("observations", state(server).observations.deepCopy()); }
         snapshot.add("world", world);
+        if (datapack != null) snapshot.add("datapack", datapack);
         if (viewer != null) snapshot.add("viewer", viewer);
         snapshot.addProperty("id", hash(object("resources", resources, "tags", tags, "recipes", recipes, "environment", environment, "mods", mods,
-            "world", world, "viewer", viewer)).substring(0, 24));
+            "world", world, "viewer", viewer, "datapack", datapack)).substring(0, 24));
         return snapshot;
     }
     private static <T> void registry(Registry<T> registry, String kind, String prefix, JsonArray resources, JsonObject tags) {

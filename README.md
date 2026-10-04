@@ -36,6 +36,8 @@ Supported interpretations are deliberately bounded: basic recipes, Mekanism enri
 
 Mod-specific acquisition methods can declare inputs, outputs, and conditions in a version-scoped DefinitionPack. See [definition contracts](docs/contracts.md) for custom serializer interpretation, capture-based tag expansion, reference validation, and coverage, and [development](docs/development.md#mod-acquisition-definitions) for checks with Foundry. Unverified Java hooks remain unknown.
 
+Server dumps also preserve raw active Mod-embedded datapack recipe JSON and override provenance without JEI/EMI. Use `atlas datapack` to inspect it; [usage](docs/usage.md#fixed-collectors) covers optional custom JSON directories and definition authoring. Raw capture does not prove registration or executability.
+
 `packages/` is one TypeScript package, not a workspace. Java collectors are separate Gradle roots under `mods/`. The harness is consumed only through the packed `craft-foundry` exports. Machine configuration, game files, caches, databases, and generated packages remain ignored.
 
 ## License

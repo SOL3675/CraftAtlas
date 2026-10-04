@@ -93,7 +93,7 @@ public final class JsonFiles {
         Path temporary = target.resolveSibling(target.getFileName() + ".tmp-" + UUID.randomUUID());
         Files.createDirectories(temporary);
         JsonObject metadata = snapshot.deepCopy(), checksums = new JsonObject();
-        for (String field : List.of("resources", "tags", "coverage", "environment", "viewer", "world")) {
+        for (String field : List.of("resources", "tags", "coverage", "environment", "viewer", "world", "datapack")) {
             if (!snapshot.has(field)) continue;
             String name = field + ".json", value = canonical(snapshot.get(field));
             write(temporary.resolve(name), value); checksums.addProperty(name, hash(value)); metadata.remove(field);

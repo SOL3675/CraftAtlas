@@ -16,6 +16,16 @@ export interface Process {
 }
 export interface Coverage { dataset: string; type: string; status: 'complete' | 'partial' | 'unsupported' | 'failed'; enumerated: number | null; interpreted: number | null; reasons: string[] }
 export interface RawRecipe { id: string; type: string; data: Json | null; error?: string }
+export interface DatapackVariant {
+  source: string; data: Json; sha256?: string; text?: string; bytesBase64?: string; error?: string;
+}
+export interface DatapackResource {
+  id: string; effective: DatapackVariant; stack: DatapackVariant[];
+}
+export interface DatapackData {
+  directories: string[]; selectedPacks: string[]; loadedPacks: string[]; disabledPacks: string[];
+  resources: DatapackResource[]; limitations: string[];
+}
 export interface WorldData {
   lootTables: RawRecipe[]; lootModifiers: RawRecipe[]; lootSources: RawRecipe[];
   biomes: RawRecipe[]; dimensions: RawRecipe[]; features: RawRecipe[];
@@ -32,8 +42,9 @@ export interface Snapshot {
   recipes: RawRecipe[]; coverage: Coverage[]; completion: { status: 'complete' | 'partial' | 'failed'; errors: string[] };
   viewer?: { session: string; generation: number; context: Json; recipes: ViewerRecipe[]; coverage: Coverage[]; kind?: 'jei' | 'emi' | 'rei'; version?: string };
   world?: WorldData;
+  datapack?: DatapackData;
 }
-export interface Model { schemaVersion: 1; snapshotId: string; session: string; generation: number; normalizerVersion: string; environment: Json; mods: Snapshot['mods']; resources: Resource[]; tags: Record<string, string[]>; processes: Process[]; evidence: Evidence[]; coverage: Coverage[]; diagnostics: Diagnostic[]; contentHash: string }
+export interface Model { schemaVersion: 1; snapshotId: string; session: string; generation: number; normalizerVersion: string; environment: Json; mods: Snapshot['mods']; resources: Resource[]; tags: Record<string, string[]>; processes: Process[]; evidence: Evidence[]; coverage: Coverage[]; diagnostics: Diagnostic[]; contentHash: string; datapack?: DatapackData }
 export interface Diagnostic { id: string; rule: string; target: string; severity: 'info' | 'warning' | 'error'; status: 'confirmed' | 'unknown'; scenario: string | null; message: string; evidence: string[]; path: string[]; unknown: string[]; snapshotId: string }
 export interface Scenario {
   schemaVersion: 1; id: string; inventory: Record<string, number>; equipment: string[]; stages: string[];
