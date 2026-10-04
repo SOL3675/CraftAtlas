@@ -3,8 +3,9 @@ import { processMeaning } from './diff.ts';
 import { normalizeWorld } from './world.ts';
 import { normalizeTechReborn, techRebornAdapter } from './techreborn.ts';
 import { validateSnapshot, validateModel } from './validate.ts';
+import { capturedRecipes, datapackRecipeId } from './datapack.ts';
 import type { Alternative, Diagnostic, Json, Model, Process, RawRecipe, Slot, Snapshot } from './types.ts';
-export const NORMALIZER_VERSION = '0.2.0';
+export const NORMALIZER_VERSION = '0.3.0';
 export const adapters = [
   techRebornAdapter,
   { id: 'vanilla', version: '1', minecraft: ['1.21.1'], loaders: ['neoforge', 'fabric'], types: ['minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'minecraft:smelting', 'minecraft:blasting', 'minecraft:smoking', 'minecraft:campfire_cooking', 'minecraft:stonecutting', 'minecraft:smithing_transform'], limitations: ['dynamic recipes', 'custom predicates'] },
@@ -26,14 +27,41 @@ function alternatives(value: any, tags: Record<string, string[]>): Alternative[]
 export function normalize(snapshot: Snapshot): Model {
   const s = validateSnapshot(snapshot);
   const m: Model = { schemaVersion: 1, snapshotId: s.id, session: s.session, generation: s.generation, normalizerVersion: NORMALIZER_VERSION, environment: s.environment, mods: s.mods, resources: structuredClone(s.resources), tags: structuredClone(s.tags), processes: [], evidence: [], coverage: structuredClone(s.coverage), diagnostics: [], contentHash: '' };
+  if (s.datapack) m.datapack = structuredClone(s.datapack);
+  const { recipes, sources, dataOnly } = capturedRecipes(s);
+  const customResources = (s.datapack?.resources ?? []).filter(r => !datapackRecipeId(r));
+  if (customResources.length) m.coverage.push({ dataset: 'datapackInterpretation', type: 'custom-directories', status: 'unsupported', enumerated: customResources.length, interpreted: 0, reasons: ['Custom resource APIs and acquisition semantics have no adapter; raw capture cannot close acquisition coverage'] });
+  for (const resource of s.datapack?.resources ?? []) {
+    if (resource.effective.error) m.diagnostics.push(diagnostic(m, 'datapack-resource-error', resource.id, resource.effective.error, 'warning', 'unknown'));
+    for (const [index, variant] of resource.stack.entries()) if (variant.error) m.diagnostics.push(diagnostic(m, 'datapack-resource-error', `${resource.id}/stack/${index}`, `${variant.source}: ${variant.error}`, 'warning', 'unknown'));
+  }
   for (const kind of new Set(['item', 'fluid', ...s.resources.map(r => r.kind)])) m.evidence.push({ id: `runtime:registry:${kind}`, kind: 'runtime', source: s.id, adapter: `${s.loader}-registry-1.21.1`, pointer: `resources/${kind}` });
   m.evidence.push({ id: 'runtime:tags', kind: 'runtime', source: s.id, adapter: `${s.loader}-tags-1.21.1`, pointer: 'tags' });
-  for (const r of [...s.recipes].sort((a, b) => a.id.localeCompare(b.id))) {
-    const ev = `runtime:${r.id}`;
+  for (const r of recipes.sort((a, b) => a.id.localeCompare(b.id))) {
+    const ev = dataOnly.has(r.id) ? `datapack:${r.id}` : `runtime:${r.id}`;
     const p: Process = { id: r.id, sourceId: r.id, type: r.type, inputs: [], outputs: [], requirements: [], evidence: [ev], interpretation: 'supported', execution: 'executable', unknown: [], enabled: true, costs: [], raw: r.data, fieldEvidence: {}, conflicts: [] };
     const adapter = adapters.find(a => a.types.includes(r.type) && a.minecraft.includes(s.minecraft) && a.loaders.includes(s.loader) && (!('mod' in a) || s.mods.some(mod => mod.id === a.mod && a.versions?.includes(mod.version))));
-    m.evidence.push({ id: ev, kind: 'runtime', source: s.id, adapter: adapter?.id ?? 'opaque', pointer: `recipes/${r.id}` });
+    m.evidence.push({ id: ev, kind: 'runtime', source: s.id, adapter: dataOnly.has(r.id) ? 'datapack-resource-1.21.1' : adapter?.id ?? 'opaque', pointer: dataOnly.has(r.id) ? `datapack/resources/${sources.get(r.id)!.id}/effective` : `recipes/${r.id}` });
+    if (sources.has(r.id) && !dataOnly.has(r.id)) {
+      const source = sources.get(r.id)!;
+      const sourceEvidence = `datapack:${r.id}`;
+      m.evidence.push({ id: sourceEvidence, kind: 'runtime', source: s.id, adapter: 'datapack-resource-1.21.1', pointer: `datapack/resources/${source.id}/effective` });
+      p.evidence.push(sourceEvidence); p.fieldEvidence.datapack = [sourceEvidence];
+      if (source.effective.error) p.unknown.push(`Datapack resource error: ${source.effective.error}`);
+      const sourceData = source.effective.data;
+      if (sourceData && typeof sourceData === 'object' && !Array.isArray(sourceData) && typeof sourceData.type === 'string' && sourceData.type !== r.type) {
+        p.conflicts.push('Datapack serializer differs from RecipeManager; runtime mutations or resource loading semantics are unknown');
+        p.unknown.push(p.conflicts.at(-1)!);
+        m.diagnostics.push(diagnostic(m, 'datapack-runtime-conflict', r.id, p.conflicts.at(-1)!, 'warning', 'unknown', p.evidence));
+      }
+    } else if (!dataOnly.has(r.id) && s.datapack) {
+      m.diagnostics.push(diagnostic(m, 'recipe-resource-missing', r.id, 'RecipeManager entry has no captured recipe resource; may be runtime-only or outside the captured directories', 'info', 'unknown', [ev]));
+    }
     try {
+      if (dataOnly.has(r.id)) {
+        p.execution = 'unconfirmed';
+        throw new Error('Resource is absent from RecipeManager; conditions, rejection or a custom recipe API may apply. Executability is unconfirmed');
+      }
       if (!adapter || !r.data || r.error) throw new Error(r.error ?? 'Unsupported recipe type/version');
       const data = r.data as any;
       const add = (ingredient: any, amount = 1) => {
@@ -77,13 +105,13 @@ export function normalize(snapshot: Snapshot): Model {
       }
       // Remainders are retained as uncertainty until acquired from the item runtime API.
       if (p.inputs.some(i => i.alternatives.some(a => a.resource?.endsWith('_bucket')))) p.unknown.push('Container remainder not acquired');
-    } catch (error) { p.interpretation = 'opaque'; p.unknown.push(String(error)); p.inputs = []; p.outputs = []; }
+    } catch (error) { p.interpretation = 'opaque'; p.execution = 'unconfirmed'; p.unknown.push(String(error)); p.inputs = []; p.outputs = []; }
     for (const key of ['inputs', 'outputs', 'requirements', 'costs']) p.fieldEvidence[key] = [ev];
     m.processes.push(p);
     if (p.interpretation === 'opaque' || p.unknown.length) m.diagnostics.push(diagnostic(m, 'unsupported-recipe', p.id, p.unknown.join('; '), 'warning', 'unknown', p.evidence));
   }
   m.coverage = m.coverage.filter(c => c.dataset !== 'normalization');
-  for (const type of [...new Set(s.recipes.map(r => r.type))].sort()) {
+  for (const type of [...new Set(recipes.map(r => r.type))].sort()) {
     const processes = m.processes.filter(p => p.type === type);
     const missing = (p: Process) => [...p.unknown, ...p.requirements.filter(r => r.kind === 'opaque').map(r => `Opaque requirement: ${r.id}`), ...p.costs.filter(c => c.amount === null).map(c => `Cost not acquired: ${c.kind}`)];
     const interpreted = processes.filter(p => p.interpretation === 'supported' && !missing(p).length).length;
@@ -94,7 +122,7 @@ export function normalize(snapshot: Snapshot): Model {
   m.contentHash = semanticHash(m); return validateModel(m);
 }
 export function semanticHash(m: Model): string {
-  return hash({ version: m.normalizerVersion, environment: m.environment, mods: [...m.mods].sort((a, b) => a.id.localeCompare(b.id)), resources: [...m.resources].sort((a, b) => a.id.localeCompare(b.id)).map(({ evidence, ...r }) => r), tags: Object.fromEntries(Object.entries(m.tags).sort().map(([k, v]) => [k, [...v].sort()])), processes: [...m.processes].sort((a, b) => a.id.localeCompare(b.id)).map(processMeaning), coverage: [...m.coverage].sort((a, b) => (a.dataset + a.type).localeCompare(b.dataset + b.type)) });
+  return hash({ version: m.normalizerVersion, ...(m.datapack ? { datapack: m.datapack } : {}), environment: m.environment, mods: [...m.mods].sort((a, b) => a.id.localeCompare(b.id)), resources: [...m.resources].sort((a, b) => a.id.localeCompare(b.id)).map(({ evidence, ...r }) => r), tags: Object.fromEntries(Object.entries(m.tags).sort().map(([k, v]) => [k, [...v].sort()])), processes: [...m.processes].sort((a, b) => a.id.localeCompare(b.id)).map(processMeaning), coverage: [...m.coverage].sort((a, b) => (a.dataset + a.type).localeCompare(b.dataset + b.type)) });
 }
 function mergeViewer(m: Model, s: Snapshot) {
   const viewer = s.viewer!;

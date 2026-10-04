@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Ajv } from 'ajv';
 import type { Model, Snapshot } from './types.ts';
+import { validateDatapack } from './datapack.ts';
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validators = new Map<string, ReturnType<Ajv['compile']>>();
 export function validate<T>(kind: string, value: unknown): T {
@@ -16,6 +17,7 @@ function unique(ids: string[], label: string) { if (new Set(ids).size !== ids.le
 export function validateSnapshot(value: unknown): Snapshot {
   const s = validate<Snapshot>('snapshot', value);
   unique(s.recipes.map(r => r.id), 'recipe ID'); unique(s.resources.map(r => r.id), 'resource ID');
+  validateDatapack(s.datapack);
   if (s.completion.status === 'failed') throw new Error('Snapshot failed');
   if (s.viewer && (s.viewer.session !== s.session || s.viewer.generation !== s.generation)) throw new Error('Stale viewer generation/session');
   if (s.viewer) unique(s.viewer.recipes.map(r => r.id), 'viewer source ID');
@@ -25,6 +27,7 @@ export function validateSnapshot(value: unknown): Snapshot {
 }
 export function validateModel(value: unknown): Model {
   const m = validate<Model>('model', value);
+  validateDatapack(m.datapack);
   unique(m.processes.map(p => p.id), 'process ID'); unique(m.evidence.map(e => e.id), 'evidence ID');
   for (const p of m.processes) for (const s of p.inputs) for (const a of s.alternatives) {
     if (!a.resource && !a.tag && !a.predicate) throw new Error(`Empty alternative in ${p.id}`);

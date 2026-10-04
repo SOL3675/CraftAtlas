@@ -18,6 +18,10 @@ Object.assign(process.properties, { viewerSources: snapshot.properties.viewer.pr
 Object.assign(process.properties, { constraints: {} });
 Object.assign(snapshot.properties.viewer.properties, { kind: { enum: ['jei', 'emi', 'rei'] }, version: str });
 const rawRecord = obj({ id: str, type: str, data: {}, error: str }, ['id', 'type', 'data']);
+const datapackVariant = obj({ source: str, data: {}, sha256: { type: 'string', pattern: '^[a-f0-9]{64}$' }, text: { type: 'string' }, bytesBase64: { type: 'string' }, error: str }, ['source', 'data']);
+const datapack = obj({ directories: strings, selectedPacks: strings, loadedPacks: strings, disabledPacks: strings,
+  resources: list(obj({ id: str, effective: datapackVariant, stack: list(datapackVariant) })), limitations: strings });
+Object.assign(snapshot.properties, { datapack });
 Object.assign(snapshot.properties, { world: obj({ lootTables: list(rawRecord), lootModifiers: list(rawRecord), lootSources: list(rawRecord), biomes: list(rawRecord), dimensions: list(rawRecord), features: list(rawRecord), observations: list({}), limitations: strings }, ['lootTables', 'lootModifiers', 'lootSources', 'biomes', 'dimensions', 'features', 'limitations']) });
 const boundedAmount = { type: 'number', exclusiveMinimum: 0, maximum: 1e12 };
 const costRequest = obj({ schemaVersion: { const: 1 }, id: str, target: obj({ resource: str, amount: boundedAmount, unit: str }), routes: { type: 'object', maxProperties: 1000, additionalProperties: obj({ process: str, output: { type: 'integer', minimum: 0, maximum: 10000 } }) }, selections: { type: 'object', maxProperties: 1000, additionalProperties: { type: 'object', maxProperties: 1000, additionalProperties: str } }, mode: { enum: ['deterministic', 'expectation'] }, probabilityModels: { type: 'object', maxProperties: 1000, additionalProperties: obj({ kind: { const: 'iid-bernoulli' }, independentOutputs: { type: 'boolean' } }) }, durability: { type: 'object', maxProperties: 1000, additionalProperties: obj({ remaining: { type: 'number', minimum: 0, maximum: 1e12 }, lifetime: boundedAmount }) } });
@@ -29,5 +33,6 @@ const schemas = {
   expectations: obj({ schemaVersion: { const: 1 }, recipes: strings, nonemptyTags: strings, supportedTypes: strings, reachable: strings, unreachable: strings }),
   definitions: obj({ schemaVersion: { const: 1 }, id: str, version: str, priority: { type: 'integer' }, targets: obj({ minecraft: str, loader: str, mods: list(obj({ id: str, versions: strings })) }), verified: strings, operations: list(obj({ id: str, selector: obj({ id: str, type: str }, []), action: { enum: ['append', 'replace', 'disable'] }, patch: obj({ inputs: list(slot), outputs: list(output), requirements: list(requirement), costs: process.properties.costs, unknown: strings, execution: process.properties.execution, interpretation: process.properties.interpretation }, []), evidence: str, override: strings })), additions: list(process) }),
 };
+Object.assign(schemas.model.properties, { datapack });
 mkdirSync('schemas', { recursive: true });
 for (const [name, schema] of Object.entries(schemas)) writeFileSync(`schemas/${name}.schema.json`, JSON.stringify({ $schema: 'http://json-schema.org/draft-07/schema#', $id: `https://craft-atlas.local/schemas/${name}`, ...schema }, null, 2) + '\n');

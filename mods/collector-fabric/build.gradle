@@ -16,7 +16,7 @@ tasks.withType(AbstractArchiveTask).configureEach { preserveFileTimestamps = fal
 tasks.withType(Jar).configureEach { from('../../LICENSE') { into 'META-INF' } }
 processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
 tasks.register('copySharedSources', Copy) {
-    from('../collector/src/main/java') { include 'dev/craftatlas/JsonFiles.java', 'dev/craftatlas/WorldCollector.java', 'dev/craftatlas/WorldObservations.java' }
+    from('../collector/src/main/java') { include 'dev/craftatlas/JsonFiles.java', 'dev/craftatlas/WorldCollector.java', 'dev/craftatlas/WorldObservations.java', 'dev/craftatlas/DatapackCollector.java', 'dev/craftatlas/ServerDatapacks.java' }
     into layout.buildDirectory.dir('shared/java')
 }
 sourceSets.main.java.srcDir(layout.buildDirectory.dir('shared/java'))

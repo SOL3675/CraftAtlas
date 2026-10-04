@@ -15,7 +15,7 @@ import { bounds, boundedCost, createAtlasServer, envelope } from '../../web/src/
 
 const help = `Craft Atlas — offline snapshot search and analysis
 Usage: pnpm atlas <command> [target] [options]
-Commands: validate import inspect sources uses coverage explain audit diff cost serve
+Commands: validate import inspect datapack sources uses coverage explain audit diff cost serve
 Input: --snapshot <JSON or directory> | --model <JSON> | --db <SQLite>
 Options: --json --snapshot-id <id> --limit <0..100> --offset <0..1000000>
          --depth <0..5> --scenario <JSON> --expectations <JSON>
@@ -51,7 +51,7 @@ export async function runCLI(argv: string[]): Promise<number> {
   try {
     const { options: o, definitions, command, target } = parse(argv);
     if (!command || o.help) { process.stdout.write(help); return 0; }
-    const commands = ['validate', 'import', 'inspect', 'sources', 'uses', 'coverage', 'explain', 'audit', 'diff', 'cost', 'serve'];
+    const commands = ['validate', 'import', 'inspect', 'datapack', 'sources', 'uses', 'coverage', 'explain', 'audit', 'diff', 'cost', 'serve'];
     if (!commands.includes(command)) throw new Error(`Unknown command ${command}`);
     const limit = bounds(o.limit, 30, 100, 'limit'), offset = bounds(o.offset, 0, 1_000_000, 'offset'), depth = bounds(o.depth, 1, 5, 'depth');
     query = { command, target: target ?? null, limit, offset, depth, snapshotId: o['snapshot-id'] ?? null };
@@ -97,6 +97,8 @@ export async function runCLI(argv: string[]): Promise<number> {
         if (dbOnly) { const db = openDatabase(o.db); try { const inspected = db.inspect(target!, { snapshotId: o['snapshot-id'], limit: Math.max(1, limit), offset }); resource = inspected.resource ?? null; tags = inspected.tags; } finally { db.close(); } }
         result = { resource, process: model.processes.find(p => p.id === target) ?? null, tags: page(tags), sources: dbOnly ? dbQuery('sources') : page(sources()), uses: dbOnly ? dbQuery('uses') : page(uses()) }; break;
       }
+      case 'datapack':
+        result = { captured: !!model.datapack, directories: model.datapack?.directories ?? [], selectedPacks: model.datapack?.selectedPacks ?? [], loadedPacks: model.datapack?.loadedPacks ?? [], disabledPacks: model.datapack?.disabledPacks ?? [], resources: page((model.datapack?.resources ?? []).filter(r => !target || r.id === target)), limitations: model.datapack?.limitations ?? ['This snapshot has no raw datapack capture'] }; break;
       case 'sources': requiredTarget(); result = dbOnly ? dbQuery('sources') : page(sources()); break;
       case 'uses': requiredTarget(); result = dbOnly ? dbQuery('uses') : page(uses()); break;
       case 'coverage': result = dbOnly ? dbQuery('coverage') : page(model.coverage); break;

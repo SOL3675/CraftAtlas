@@ -13,6 +13,7 @@ import { bytesHash, hash } from '../../core/src/hash.ts';
 import { evaluate } from './evaluate.ts';
 import { runArtifacts, saveResults, waitFor, RequiredUnsupported } from './common.ts';
 import { verifyCommonFixture } from './fabric-common.ts';
+import { verifyDatapackFixture } from './datapack.ts';
 import type { Case } from './common.ts';
 import type { Expectations } from '../../core/src/types.ts';
 const root = resolve(fileURLToPath(new URL('../../../', import.meta.url))), session = resolve(process.argv[2]), runRoot = resolve(process.argv[3]), target = process.argv[4];
@@ -41,6 +42,7 @@ try {
     return snapshot;
   };
   const baseline = await capture('baseline'), model = normalize(baseline);
+  writeFileSync(join(session, 'datapack-fixture.json'), JSON.stringify(verifyDatapackFixture(baseline, JSON.parse(readFileSync(join(root, 'fixtures/datapack/data/minecraft/recipe/stick.json'), 'utf8')), 'mekanism'), null, 2));
   const expectations = JSON.parse(readFileSync(join(root, 'fixtures/expectations.json'), 'utf8')) as Expectations;
   assert.ok(baseline.recipes.length > 100); assert.equal(baseline.mode, 'dedicated');
   assert.ok(baseline.recipes.some(r => r.id === 'crafttweaker:atlas_script'));
@@ -70,6 +72,9 @@ try {
     const changed = await capture('changed'); assert.equal(changed.session, baseline.session); assert.ok(changed.generation > baseline.generation);
     assert.ok(!changed.recipes.some(r => r.id === 'atlas:added')); assert.deepEqual(changed.tags['atlas:alternatives'], ['minecraft:dirt']);
     const after = normalize(changed), differences = diff(model, after);
+    verifyDatapackFixture(changed, { type: 'minecraft:crafting_shapeless', ingredients: [{ item: 'minecraft:cobblestone' }], result: { id: 'minecraft:stick', count: 5 } }, 'mekanism');
+    assert.ok(changed.datapack!.resources.some(r => r.id === 'atlas:recipe/added.json'), 'Script removal must not erase the source JSON');
+    assert.equal(after.processes.find(p => p.id === 'atlas:added')?.execution, 'unconfirmed');
     assert.notEqual(model.contentHash, after.contentHash); assert.ok(differences.changes.length >= 3);
     writeFileSync(join(session, 'diff.json'), JSON.stringify(differences, null, 2)); buildDatabase(join(session, 'changed.sqlite'), after);
     cases.push({ id: stage, status: 'passed', message: `Reload generation ${changed.generation}; diff.json` });

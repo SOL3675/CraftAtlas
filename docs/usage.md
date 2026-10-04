@@ -48,6 +48,18 @@ craftatlas dump changed
 
 Wait for loading/reload completion and both `CRAFTATLAS COMPLETE` and `craftatlas/<label>/completion.json`. Use a new label; existing captures are not overwritten. With ready JEI in an integrated world, `/craftatlas-client dump integrated` adds viewer data. Dedicated-server remote viewer capture is unsupported. Stale session/generation viewer data is rejected; use server-only capture or a fresh integrated session when viewer readiness does not match.
 
+Server dumps on both 1.21.1 loaders also write `datapack.json`, independently of JEI/EMI. It preserves active Mod-embedded and world datapack recipe JSON, original text/hashes, the effective resource and visible override stack. Inspect it with:
+
+```console
+pnpm atlas datapack --snapshot craftatlas/baseline --limit 30 --json
+pnpm atlas datapack example:recipe/press.json --snapshot craftatlas/baseline --json
+pnpm atlas inspect example:press --snapshot craftatlas/baseline --json
+```
+
+For a Mod with a separate server JSON directory, add `-Dcraftatlas.resourceDirectories=machines,example/acquisition` to the game JVM arguments before startup. Directories are paths **below** `data/<namespace>/`; `recipe` is always included. This opt-in capture does not interpret custom recipe APIs. Only `.json` resources in these directories are dumped. Selected/loaded pack IDs and disabled pack IDs are recorded, but disabled-pack contents and client assets are excluded.
+
+Use the effective JSON and runtime entry to author a version-scoped `--definitions` pack following [definition contracts](contracts.md). An unknown serializer stays opaque. A recipe resource absent from RecipeManager remains unconfirmed, even with vanilla-looking fields; inspect conditions, the custom loader/API and machine behavior before declaring reviewed inputs, outputs or `execution: "executable"`. A custom-directory resource has no assumed recipe ID convention: use an explicit definition addition after reviewing its behavior. Source JSON and raw capture coverage survive overlays. Older dumps have no raw dataset; `atlas datapack` reports `captured: false`.
+
 ## Harness setup and game validation
 
 Shared targets and tool pins are in [harness.config.json](../harness.config.json) and [harness.lock.json](../harness.lock.json). Create ignored `harness.local.json` with actual absolute homes:
