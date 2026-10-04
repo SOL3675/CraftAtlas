@@ -74,7 +74,15 @@ try {
   evidence.launch = await adapter.launch(); await adapter.waitReady(240000, false);
   // This freshly generated, owned world may carry experimental datapack settings.
   // Read the actual screen and record its warning before accepting only this known load dialog.
-  const current = await waitFor('Fresh world load dialog or integrated server',async () => await adapter!.control('gui.info') as any,
+  const current = await waitFor('Fresh world load dialog or integrated server',async () => {
+    const screen = await adapter!.control('gui.info') as any;
+    if (hash(screen) !== hash(evidence.loadScreen ?? null)) {
+      evidence.loadScreen = screen;
+      writeFileSync(join(session, 'load-screen.json'), JSON.stringify(screen, null, 2));
+    }
+    if (screen.type === 'LoadingErrorScreen') throw new Error('Forge mod loading did not complete: ' + screen.title + '; see load-screen.json and the failure screenshot');
+    return screen;
+  },
     screen => screen.title === 'Worlds using Experimental Settings are not supported' || /CRAFTATLAS READY/.test(readFileSync(log,'utf8')),180000);
   if (current.title === 'Worlds using Experimental Settings are not supported' && current.category === 'screen') {
     // The helper can expose the backing screen while the startup overlay still covers it.
@@ -126,6 +134,10 @@ try {
   evidence.screenshot = await adapter.screenshot('atlas-integrated.png');
   cases.push({ id: stage, status: 'passed', message: `${metadata.viewer.toUpperCase()} captured ${snapshot.viewer.recipes.length} entries with matching generation; machine equipment and stale-token rejection verified` });
 } catch (error) {
+  if (adapter && clientDir) {
+    try { evidence.failureScreen = await adapter.screenshot('atlas-failure-screen.png'); }
+    catch (failure) { evidence.failureScreenError = String(failure); }
+  }
   process.stderr.write(String(error) + '\n'); cases.push({ id: stage, status: error instanceof RequiredUnsupported ? 'unsupported' : error instanceof assert.AssertionError ? 'failed' : 'infrastructure-error', message: String(error) });
 } finally {
   if (!worldStopped) { try { await preparation.stop(); } catch (error) { evidence.preparationStopError = String(error); } }
