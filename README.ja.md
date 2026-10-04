@@ -55,6 +55,8 @@ pnpm atlas cost --snapshot fixtures/definition-progression-snapshot.json --defin
 pnpm atlas serve --snapshot fixtures/definition-progression-snapshot.json --definitions definitions/fixture-progression.json --scenario fixtures/definition-progression-scenario.json --request fixtures/definition-progression-cost-request.json
 ```
 
+Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力・出力・条件を記述できます。独自 serializer の解釈状態、キャプチャに基づくタグ展開、参照検証と coverage の扱いは [定義契約](docs/contracts.md)、Foundry との開発チェックは [開発手順](docs/development.md#mod-acquisition-definitions) を参照してください。未検証の Java hook は unknown を維持します。
+
 性能の測定方法と予算は [性能測定](docs/performance.md) を参照してください。
 
 ## 構成
@@ -80,5 +82,3 @@ node dist/packages/cli/src/main.js validate --snapshot fixtures/before.json --js
 ## ライセンス
 
 CraftAtlas 独自のコードとドキュメントには [MIT](LICENSE) を適用します（Copyright (c) 2026 SOL3675）。第三者のライセンスと著作権表示は維持します。Gradle Wrapper スクリプトの Apache-2.0 ヘッダーと JAR 内の `META-INF/LICENSE` は変更しません。依存ライブラリ、取得する Mod、Minecraft はそれぞれのライセンスに従います。ビルド時に LICENSE を `dist/` へコピーし、collector のバイナリ・ソース JAR には `META-INF/LICENSE` として同梱します。プロジェクトは引き続き未公開・`private: true` です。
-
-Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力・出力・条件を記述できます。独自 serializer の解釈状態、キャプチャに基づくタグ展開、参照検証と coverage の扱いは [定義契約](docs/contracts.md)、Foundry との開発チェックは [開発手順](docs/development.md#mod-acquisition-definitions) を参照してください。未検証の Java hook は unknown を維持します。

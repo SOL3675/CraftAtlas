@@ -34,6 +34,8 @@ Collectors target Minecraft 1.21.1 / Java 21, NeoForge 21.1.252 and Fabric Loade
 
 Supported interpretations are deliberately bounded: basic recipes, Mekanism enriching, TechReborn grinder, declared equipment/progression, selected-route costs, and portions of Loot/worldgen. Viewer display is not proof of execution. Finite observations do not prove absence or sustainable supply. Fictional equipment/progression fixtures are contract tests, not verified real-Mod behavior.
 
+Mod-specific acquisition methods can declare inputs, outputs, and conditions in a version-scoped DefinitionPack. See [definition contracts](docs/contracts.md) for custom serializer interpretation, capture-based tag expansion, reference validation, and coverage, and [development](docs/development.md#mod-acquisition-definitions) for checks with Foundry. Unverified Java hooks remain unknown.
+
 `packages/` is one TypeScript package, not a workspace. Java collectors are separate Gradle roots under `mods/`. The harness is consumed only through the packed `craft-foundry` exports. Machine configuration, game files, caches, databases, and generated packages remain ignored.
 
 ## License
