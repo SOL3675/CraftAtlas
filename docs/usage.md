@@ -1,6 +1,6 @@
 # Usage
 
-Start with [development setup](development.md), including the Foundry bootstrap before frozen install. Commands run from the repository root. Saved data requires Node 24; Java collectors additionally need Java 21.
+Start with [development setup](development.md), including the Foundry bootstrap before frozen install. Commands run from the repository root. Saved data requires Node 24; Java collectors additionally need Java 21 for 1.21.1 or Java 17 for 1.20.1.
 
 ## Saved snapshots and local UI
 
@@ -48,7 +48,7 @@ craftatlas dump changed
 
 Wait for loading/reload completion and both `CRAFTATLAS COMPLETE` and `craftatlas/<label>/completion.json`. Use a new label; existing captures are not overwritten. With ready JEI in an integrated world, `/craftatlas-client dump integrated` adds viewer data. Dedicated-server remote viewer capture is unsupported. Stale session/generation viewer data is rejected; use server-only capture or a fresh integrated session when viewer readiness does not match.
 
-Server dumps on both 1.21.1 loaders also write `datapack.json`, independently of JEI/EMI. It preserves active Mod-embedded and world datapack recipe JSON, original text/hashes, the effective resource and visible override stack. Inspect it with:
+Server dumps on all four configured targets also write `datapack.json`, independently of JEI/EMI. It preserves active Mod-embedded and world datapack recipe JSON, original text/hashes, the effective resource and visible override stack. Inspect it with:
 
 ```console
 pnpm atlas datapack --snapshot craftatlas/baseline --limit 30 --json
@@ -56,7 +56,7 @@ pnpm atlas datapack example:recipe/press.json --snapshot craftatlas/baseline --j
 pnpm atlas inspect example:press --snapshot craftatlas/baseline --json
 ```
 
-For a Mod with a separate server JSON directory, add `-Dcraftatlas.resourceDirectories=machines,example/acquisition` to the game JVM arguments before startup. Directories are paths **below** `data/<namespace>/`; `recipe` is always included. This opt-in capture does not interpret custom recipe APIs. Only `.json` resources in these directories are dumped. Selected/loaded pack IDs and disabled pack IDs are recorded, but disabled-pack contents and client assets are excluded.
+For a Mod with a separate server JSON directory, add `-Dcraftatlas.resourceDirectories=machines,example/acquisition` to the game JVM arguments before startup. Directories are paths **below** `data/<namespace>/`; the standard recipe directory is always included: `recipes` for 1.20.1 and `recipe` for 1.21.1. This opt-in capture does not interpret custom recipe APIs. Only `.json` resources in these directories are dumped. Selected/loaded pack IDs and disabled pack IDs are recorded, but disabled-pack contents and client assets are excluded.
 
 Use the effective JSON and runtime entry to author a version-scoped `--definitions` pack following [definition contracts](contracts.md). An unknown serializer stays opaque. A recipe resource absent from RecipeManager remains unconfirmed, even with vanilla-looking fields; inspect conditions, the custom loader/API and machine behavior before declaring reviewed inputs, outputs or `execution: "executable"`. A custom-directory resource has no assumed recipe ID convention: use an explicit definition addition after reviewing its behavior. Source JSON and raw capture coverage survive overlays. Older dumps have no raw dataset; `atlas datapack` reports `captured: false`.
 
@@ -92,11 +92,46 @@ pnpm exec mch test --target neoforge-1.21.1 --suite atlas-client --json
 pnpm exec mch test --all --profile release --json
 ```
 
-Release includes NeoForge atlas-server/client/offline/world and Fabric atlas-fabric-server/client/offline. Missing client prerequisites cannot be replaced by server-only success. Runs preserve raw captures, snapshots, artifacts, diagnostics, diffs, and logs under `.harness/runs/<run-id>/`.
+Release includes NeoForge 1.21.1 atlas-server/client/offline/world, Fabric 1.21.1 atlas-fabric-server/client/offline, and both 1.20.1 targets with atlas-1.20.1-server, their JEI/EMI client suite, and atlas-offline. Missing client prerequisites cannot be replaced by server-only success. Runs preserve raw captures, snapshots, artifacts, diagnostics, diffs, and logs under `.harness/runs/<run-id>/`.
 
 `atlas-negative` is an intentional failure outside required release suites; run it explicitly and expect failed recipe/tag requirements. The normal server suite's failure-fixture case instead passes when it successfully detects the injected violation.
 
+## Forge and Fabric 1.20.1
+
+The independent builds are `mods/collector-forge-1.20.1` (ForgeGradle 6.0.36 / Gradle 8.8) and `mods/collector-fabric-1.20.1` (Loom 1.8.13 / Gradle 8.10). Both use official Mojang mappings and Java 17 for compilation and the game. Fabric/Loom runs Gradle on Java 21; Forge runs Gradle on Java 17, matching Foundry's target roles. The loader/API pins match Foundry's existing 1.20.1 fixtures; the [tool lock](../harness.lock.json) reuses its server installers and mc-pilot helper hashes. These targets consume the reachable immutable Foundry 0.1.5 package recorded in `craft-foundry.source.json`. Foundry's separate repository-only survival runner still supports its documented 1.21.1 targets; this change does not extend that runner.
+
+Add an absolute `java.java17` installation root to ignored `harness.local.json`, alongside `java21` for regression validation. Provide Node 24.19.0, npm 11.9.0, pnpm 11.19.0, Git access to the source pin, network/cache access to the configured Gradle distributions, Forge/Fabric/JEI/EMI Maven repositories and official Minecraft downloads. Clients require the verified mc-pilot 0.15.0 installation and display prerequisites. EULA state must come from the user's existing acceptance. Do not bypass blocked repositories or promote offline checks to a game pass.
+
+After the approved local checkout/transfer on SOL-SUBMARINE, run from Atlas:
+
+```console
+node scripts/prepare-foundry.mjs --source ../CraftFoundry
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm check
+pnpm test
+pnpm build
+pnpm exec mch doctor --json
+pnpm exec mch inspect --target forge-1.20.1 --json
+pnpm exec mch build --target forge-1.20.1 --json
+pnpm exec mch test --target forge-1.20.1 --suite atlas-offline --json
+pnpm exec mch test --target forge-1.20.1 --suite atlas-1.20.1-server --json
+pnpm exec mch test --target forge-1.20.1 --suite atlas-1.20.1-jei --json
+pnpm exec mch inspect --target fabric-1.20.1 --json
+pnpm exec mch build --target fabric-1.20.1 --json
+pnpm exec mch test --target fabric-1.20.1 --suite atlas-offline --json
+pnpm exec mch test --target fabric-1.20.1 --suite atlas-1.20.1-server --json
+pnpm exec mch test --target fabric-1.20.1 --suite atlas-1.20.1-emi --json
+```
+
+There is no separate pack-fetch script for 1.20.1: Gradle resolves the exact API/viewer coordinates and exports actual dependency JAR hashes through `harnessExport`. JEI/EMI artifacts are client-only; Fabric API is deployed on both sides. These distribution hashes are run evidence, not proof of immutable Maven contents across future downloads. The harness also deploys a separate fictional data-only fixture Mod from `fixtures/embedded-1.20.1`, built with loader-specific metadata; it is not part of the collector distribution JAR. The server suite checks its embedded JSON, world overrides, source-only conditions, runtime-only entries, repeat identity, interrupted publication, reload and failed expectations. `craftatlas.testRuntimeFixture=true` is an isolated test JVM opt-in; normal collectors do not add runtime recipes.
+
+Minecraft 1.20.1 serializers expose `fromJson`, `toNetwork` and `fromNetwork`, with no universal runtime JSON codec. Captures retain network base64/SHA-256 under each recipe's `serialization`; reviewed exact vanilla implementations additionally expose crafting, cooking, stonecutting and smithing-transform fields. Other implementations stay opaque with unsupported `recipeSerialization` coverage. Source JSON remains independent and cannot repair missing runtime semantics. NBT is retained with unknown matching/mutation behavior; JEI/EMI fluid units remain mB/droplets respectively. Forge global modifiers use a fixed 47.3.0 internal map boundary to retain applied IDs/order; arbitrary hooks remain unknown. Finite observation commands are currently unsupported on 1.20.1 and explicitly reported in coverage.
+
+For the existing 1.21.1 regression builds, first run `node scripts/fetch-pack.ts` and `node scripts/fetch-fabric-pack.ts`, then inspect/build both existing targets and execute their required suites. Finally run `pnpm exec mch test --all --profile release --json` after all prerequisites are present. Review current Run reports, actual distribution/dependency hashes, expected IDs and raw capture artifacts. Successful TypeScript tests or pure Java parser probes establish neither Minecraft compilation nor runtime behavior.
+
 ## World observations
+
+The following observation commands apply to the existing 1.21.1 collectors.
 
 ```text
 craftatlas observe loot probe atlas:probe 10
