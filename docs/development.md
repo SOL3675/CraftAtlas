@@ -41,6 +41,21 @@ Future placement at `CraftFoundry/projects/craft-atlas` uses `--source ../..`. E
 
 The six imports are `core/config`, `core/cache`, `core/tools`, `core/types`, `adapters/runtime/server`, and `adapters/runtime/mc-pilot`, under `craft-foundry/`. Source and compiled adapters resolve these same exports; do not edit installed node_modules or copy harness source.
 
+## Mod acquisition definitions
+
+When adding a serializer, machine, trade or code-controlled item source, first inspect the target capture and `packages/core/src/normalize.ts`. Add or update a version-scoped DefinitionPack only for reviewed semantics; do not represent a material-consuming process as a starting inventory seed. Existing append/replace/disable/addition behavior and conflicts remain explicit. Use [definition contracts](contracts.md) for interpretation patches, references, tag expansion and coverage.
+
+Run `pnpm check`, `pnpm test`, and `pnpm build` after authoring changes. `tests/definition-authoring.test.ts` exercises both 1.21.1 loaders, conditional custom serializer mapping, missing inputs, missing references, conflicts and incomplete captures. Add/update an equivalent positive route and missing-prerequisite regression for each new mechanism. Keep dynamic hooks unknown when their actual conditions cannot be verified.
+
+For the Foundry development workflow, use its [survival suite](https://github.com/SOL3675/CraftFoundry/blob/dev/docs/survival.md). Until this Atlas commit is published and selected by a reviewed Foundry gitlink, run from the Foundry checkout:
+
+```console
+npm run test:atlas:definitions -- --atlas-source ../CraftAtlas
+node scripts/atlas-survival.mjs --config tests/atlas-definitions/fixtures/suite.json --results .harness/custom/results.json --atlas-source ../CraftAtlas
+```
+
+The explicit source must be a clean local Git checkout; results record its full commit and that it is a development source. Foundry's default runner continues to require the exact clean submodule pin. Publish the reviewed Atlas change first, then update Foundry's gitlink and enable its definition integration tests in CI. Do not commit an unreachable remote pin or alter Atlas's independently pinned Foundry package to perform this source integration.
+
 ## Validation and CI
 
 [Contract CI](../.github/workflows/contracts.yml) installs pinned npm/pnpm in an ignored local prefix and calls their explicit JS entry points on both operating systems. `CRAFTFOUNDRY_NPM_CLI` identifies the installed npm entry point for bootstrap and remains stable when pnpm overrides npm_execpath; the selected version is still verified. Bootstrap regression tests run before repository access, so an authentication failure cannot hide those results. The full consumer checks still require the real pinned Foundry package and do not pass when acquisition fails.

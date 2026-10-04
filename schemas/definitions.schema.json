@@ -311,6 +311,12 @@
                   "display",
                   "unconfirmed"
                 ]
+              },
+              "interpretation": {
+                "enum": [
+                  "supported",
+                  "opaque"
+                ]
               }
             },
             "required": []

@@ -20,6 +20,10 @@ Results are reachable/unreachable/unknown. Proving unreachable requires an expli
 
 Definitions declare exact target Minecraft/loader/Mod versions, distinguish missing targets, version mismatch, unmatched selectors, duplicates, and conflicts, and support append/replace/disable/additional processes. Replacements must explicitly override conflicts; priority alone does not hide them. Definitions enrich analysis and do not modify the game. Fictional definitions are test inputs, not real-Mod support claims.
 
+For a custom serializer, an explicit `replace` operation can also set `interpretation: "supported"`. Supply reviewed inputs, outputs, requirements, execution state and remaining unknowns; setting interpretation alone does not remove uncertainty. An opaque Java condition needs an opaque requirement or an unknown reason. Typed `context` requirements use explicit scenario facts, not Java execution. The consumer capability marker `definitionContractVersion = 2` distinguishes this authoring support from older source APIs; the additive JSON schema remains version 1.
+
+Definition inputs/outputs must reference captured resources. Tags are expanded from the current snapshot, overriding supplied member lists; missing tags/resources and ambiguous alternatives produce `definition-reference-missing` and retain unknown. Equipment, stage and dimension requirements may name explicit scenario assumptions; reusable unlock resources still need to be present in the captured resource model. Overlays preserve raw values, field history and runtime diagnostics. After applying definitions, derived recipe normalization coverage is recalculated and added processes have separate `definitions` coverage. Raw capture/world/viewer coverage is never promoted. Unknown costs, predicates, custom constraints and conflicts retain incomplete interpretation. The Foundry survival evidence also records original and effective coverage and definition hashes.
+
 SQLite is a rebuildable single-snapshot query cache, not an append-only history store. Keep the raw snapshot, normalizer revision, and applied definitions to reproduce it.
 
 ## CLI and HTTP

@@ -54,6 +54,6 @@ export interface DefinitionPack {
   schemaVersion: 1; id: string; version: string; priority: number;
   targets: { minecraft: string; loader: string; mods: { id: string; versions: string[] }[] };
   verified: string[];
-  operations: { id: string; selector: { id?: string; type?: string }; action: 'append' | 'replace' | 'disable'; patch: Partial<Pick<Process, 'inputs' | 'outputs' | 'requirements' | 'costs' | 'unknown' | 'execution'>>; evidence: string; override: string[] }[];
+  operations: { id: string; selector: { id?: string; type?: string }; action: 'append' | 'replace' | 'disable'; patch: Partial<Pick<Process, 'inputs' | 'outputs' | 'requirements' | 'costs' | 'unknown' | 'execution' | 'interpretation'>>; evidence: string; override: string[] }[];
   additions: Process[];
 }
