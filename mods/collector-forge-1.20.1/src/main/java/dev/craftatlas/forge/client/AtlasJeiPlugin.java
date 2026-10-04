@@ -68,7 +68,7 @@ public final class AtlasJeiPlugin implements IModPlugin {
             .map(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()).distinct().sorted().forEach(equipment::add);
         for (T recipe : entries) {
             try {
-                JsonArray inputs = new JsonArray(), outputs = new JsonArray(), unknown = new JsonArray();
+                JsonArray inputs = new JsonArray(), outputs = new JsonArray(), unknown = new JsonArray(), rawSlots = new JsonArray();
                 var layout = manager.createRecipeLayoutDrawable(category, recipe, runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).orElseThrow();
                 for (var slot : layout.getRecipeSlotsView().getSlotViews()) {
                     JsonArray alternatives = new JsonArray(); List<Double> amounts = new ArrayList<>(); List<String> units = new ArrayList<>();
@@ -93,27 +93,37 @@ public final class AtlasJeiPlugin implements IModPlugin {
                         else if (amount != quantity || !unit.equals(ingredientUnit)) unknown.add("Alternatives differ in quantity/unit; linked quantity not interpreted");
                         alternatives.add(alternative); amounts.add(quantity); units.add(ingredientUnit);
                     }
+                    rawSlots.add(object("role", slot.getRole().toString(), "alternatives", alternatives, "amounts", amounts, "units", units));
                     if (slot.getRole() == RecipeIngredientRole.OUTPUT) {
                         if (alternatives.size() > 1) unknown.add("Output slot has alternatives; probabilities and correlation are unknown");
                         for (int i = 0; i < alternatives.size(); ++i) {
                             JsonObject a = alternatives.get(i).getAsJsonObject();
                             if (!a.has("resource")) { unknown.add("Opaque output ingredient"); continue; }
+                            if (amounts.get(i) <= 0) { unknown.add("Viewer output quantity is zero/unknown; retained in raw slots"); continue; }
                             JsonObject output = object("resource", a.get("resource"), "amount", amounts.get(i), "unit", units.get(i),
                                 "role", "primary", "probability", null, "evidence", array());
                             if (a.has("components")) output.add("components", a.get("components")); outputs.add(output);
                         }
                     } else if (slot.getRole() == RecipeIngredientRole.INPUT || slot.getRole() == RecipeIngredientRole.CATALYST) {
+                        if (alternatives.isEmpty() || amount <= 0) { unknown.add("Empty/zero-amount viewer input; retained in raw slots"); continue; }
                         inputs.add(object("alternatives", alternatives, "amount", amount, "unit", unit,
                             "consumption", slot.getRole() == RecipeIngredientRole.CATALYST ? "catalyst" : "consumed", "evidence", array()));
                     }
                 }
                 ResourceLocation registryName = category.getRegistryName(recipe);
                 String recipeId = recipe instanceof Recipe<?> holder ? holder.getId().toString() : registryName == null ? null : registryName.toString();
-                JsonObject raw = object("category", type, "recipeClass", recipe.getClass().getName(), "registryName", registryName == null ? null : registryName.toString());
+                JsonObject raw = object("category", type, "recipeClass", recipe.getClass().getName(), "registryName", registryName == null ? null : registryName.toString(), "slots", rawSlots);
                 JsonObject row = object("recipeId", recipeId, "category", type, "inputs", inputs, "outputs", outputs, "equipment", equipment,
                     "execution", "unconfirmed", "unknown", unknown, "raw", raw);
                 row.addProperty("id", type + "/" + (recipeId == null ? hash(row).substring(0, 24) : recipeId)); recipes.add(row); ++captured;
-            } catch (Exception e) { failures.add(e.toString()); }
+            } catch (Exception e) {
+                String recipeId = recipe instanceof Recipe<?> value ? value.getId().toString() : null;
+                JsonObject raw = object("category", type, "recipeClass", recipe.getClass().getName(), "error", e.toString());
+                String id = type + "/failed/" + (recipeId == null ? hash(raw).substring(0, 24) : recipeId);
+                failures.add(id + ": " + e);
+                recipes.add(object("id", id, "recipeId", recipeId, "category", type, "inputs", array(), "outputs", array(), "equipment", equipment,
+                    "execution", "unconfirmed", "unknown", array("Viewer capture failed: " + e), "raw", raw));
+            }
         }
         coverage.add(Collector.coverage("viewer", type, captured == entries.size() ? "complete" : "partial", entries.size(), null, failures));
     }

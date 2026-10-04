@@ -113,6 +113,7 @@ try {
   stage = `atlas.${metadata.viewer}`;
   assert.ok(snapshot.viewer && snapshot.viewer.recipes.length > 100);
   assert.equal(snapshot.viewer.kind,metadata.viewer);
+  if (snapshot.viewer.coverage.some(c => c.status !== 'complete')) throw new RequiredUnsupported('Required viewer capture is incomplete; failed entries and raw evidence are retained');
   assert.equal(snapshot.viewer.session, snapshot.session); assert.equal(snapshot.viewer.generation, snapshot.generation);
   assert.ok(snapshot.viewer.recipes.some(r => r.recipeId && snapshot.recipes.some(s => s.id === r.recipeId)));
   assert.ok(snapshot.viewer.recipes.some(r => r.category === 'minecraft:smelting' && r.equipment.includes('minecraft:furnace')));
