@@ -23,6 +23,8 @@ Inputs are a snapshot JSON/completed capture directory, normalized `--model`, or
 
 UI defaults to http://127.0.0.1:4317; `--port` changes the port, and `--host` only allows loopback. Stop with Ctrl+C. The UI is read-only. Search and expand resources/processes to inspect quantities, OR choices, equipment, costs, provenance, and unknowns. Mod filters affect display; use scenario forbiddenProcesses/allowedTypes and restart to change analysis. Without a scenario there is no reachability analysis; without `--before` there is no comparison.
 
+The graph starts at 100% for readable labels even with many nodes. Use the labeled zoom buttons (5–400%), drag inside the diagram to pan, or Ctrl/Command + wheel to zoom around the pointer. Ordinary wheel scrolling still scrolls the page. Reset restores 100% at the top of the graph; Fit shows all nodes and follows viewport resizing. With the diagram focused, arrow keys pan, +/− zoom, 0/Home reset, and F fits. Nodes still open with a click or Enter/Space; dragging does not select them. Selecting another resource or changing depth/direction starts a fresh view.
+
 `pnpm fixture` regenerates small offline fixtures; it is a development operation, not a game capture. `pnpm build` also permits `node dist/packages/cli/src/main.js` instead of the source CLI.
 
 ## Fixed collectors

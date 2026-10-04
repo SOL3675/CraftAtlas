@@ -1,3 +1,4 @@
+import { graphViewport } from './graph-viewport.js';
 const $ = id => document.getElementById(id);
 const state = { id: null, kind: '', offset: 0, limit: 30, evidence: [], searchRevision: 0, graphRevision: 0 };
 const el = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -28,15 +29,19 @@ function diagram(data, root) {
   const inputs = new Set(data.edges.filter(e => !e.from.startsWith('process:')).map(e => e.from));
   const lanes = [data.nodes.filter(n => n.kind !== 'process' && inputs.has(n.id)), data.nodes.filter(n => n.kind === 'process'), data.nodes.filter(n => n.kind === 'resource' && !inputs.has(n.id))];
   const height = Math.max(230, ...lanes.map(lane => lane.length * 82 + 55));
-  const svg = svgEl('svg', { viewBox: `0 0 850 ${height}`, class: 'diagram', 'aria-label': '資源と処理の局所グラフ' });
+  const toolbar = el('div', undefined, 'graph-toolbar'); toolbar.setAttribute('role', 'group'); toolbar.setAttribute('aria-label', 'グラフ表示操作');
+  const hint = el('small', 'ドラッグで移動 · Ctrl / ⌘ + ホイールで拡大・縮小。グラフにフォーカスして矢印で移動、+ / − でズーム、0 でリセット、F で全体表示。', 'graph-hint'); hint.id = 'graph-hint';
+  const svg = svgEl('svg', { class: 'diagram', tabindex: '0', 'aria-label': '資源と処理の局所グラフ', 'aria-describedby': hint.id });
+  const content = svgEl('g', { class: 'diagram-content' });
   const defs = svgEl('defs'), marker = svgEl('marker', { id: 'arrow', markerWidth: '8', markerHeight: '8', refX: '7', refY: '3', orient: 'auto', markerUnits: 'strokeWidth' }); marker.append(svgEl('path', { d: 'M0,0 L0,6 L7,3 z', fill: '#71948b' })); defs.append(marker); svg.append(defs);
+  svg.append(content);
   const positions = new Map();
   lanes.forEach((lane, index) => lane.forEach((node, row) => positions.set(node.id, { x: 20 + index * 300, y: 40 + row * 82, node })));
-  ['入力資源 / 前提条件', '処理 (AND / OR)', '出力資源'].forEach((label, index) => { const text = svgEl('text', { x: 20 + index * 300, y: 17, class: 'diagram-caption' }); text.textContent = label; svg.append(text); });
+  ['入力資源 / 前提条件', '処理 (AND / OR)', '出力資源'].forEach((label, index) => { const text = svgEl('text', { x: 20 + index * 300, y: 17, class: 'diagram-caption' }); text.textContent = label; content.append(text); });
   data.edges.forEach(edge => {
     const a = positions.get(edge.from), b = positions.get(edge.to); if (!a || !b) return;
     const right = b.x >= a.x, x1 = a.x + (right ? 225 : 0), x2 = b.x + (right ? 0 : 225), y1 = a.y + 26, y2 = b.y + 26, mid = (x1 + x2) / 2;
-    const path = svgEl('path', { d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`, class: 'diagram-edge', 'marker-end': 'url(#arrow)' }); const title = svgEl('title'); title.textContent = edge.label; path.append(title); svg.append(path);
+    const path = svgEl('path', { d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`, class: 'diagram-edge', 'marker-end': 'url(#arrow)' }); const title = svgEl('title'); title.textContent = edge.label; path.append(title); content.append(path);
   });
   positions.forEach(({ x, y, node }) => {
     const group = svgEl('g', { transform: `translate(${x},${y})`, role: 'button', tabindex: '0', 'aria-label': node.data.id, class: `diagram-node ${node.kind}` });
@@ -45,8 +50,13 @@ function diagram(data, root) {
     const sub = svgEl('text', { x: '12', y: '42', class: 'diagram-caption' }); sub.textContent = node.kind === 'process' ? `${node.data.inputs.length} スロット · ${node.data.requirements.length} 条件${node.data.unknown.length ? ' · 未解析' : ''}` : node.data.id.length > 30 ? node.data.id.slice(0, 28) + '…' : node.data.id; group.append(sub);
     const title = svgEl('title'); title.textContent = node.data.id; group.append(title);
     const activate = () => node.kind === 'resource' ? select(node.data.id) : detail(node.data);
-    group.addEventListener('click', activate); group.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } }); svg.append(group);
-  }); root.append(svg);
+    group.addEventListener('focus', () => {
+      const nodeBounds = group.getBoundingClientRect(), viewport = svg.getBoundingClientRect();
+      if (nodeBounds.left < viewport.left || nodeBounds.right > viewport.right || nodeBounds.top < viewport.top || nodeBounds.bottom > viewport.bottom) group.dispatchEvent(new CustomEvent('reveal-node', { bubbles: true }));
+    });
+    group.addEventListener('click', activate); group.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } }); content.append(group);
+  }); root.append(toolbar, hint, svg);
+  state.disposeDiagram = graphViewport(svg, content, toolbar, 850, height);
 }
 async function search() {
   const revision = ++state.searchRevision;
@@ -74,6 +84,7 @@ async function graph() {
     const body = await api('graph', params);
     const received = performance.now();
     if (revision !== state.graphRevision) return;
+    state.disposeDiagram?.();
     state.evidence = body.evidence; const data = body.result, root = $('graph'); root.replaceChildren();
     const byId = new Map(data.nodes.map(n => [n.id, n])); diagram(data, root);
     const nodeList = el('details'); nodeList.append(el('summary', `ノード一覧 · ${data.nodes.length} 件`)); root.append(nodeList);
