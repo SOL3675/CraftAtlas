@@ -1,3 +1,4 @@
+import { msg, localize } from './localization.js';
 export const MIN_ZOOM = 0.05;
 export const MAX_ZOOM = 4;
 const PADDING = 20;
@@ -41,14 +42,14 @@ export class GraphCamera {
 export function graphViewport(svg, content, toolbar, contentWidth, contentHeight) {
   const camera = new GraphCamera(contentWidth, contentHeight);
   const output = document.createElement('output');
-  output.setAttribute('aria-label', 'グラフの表示倍率'); output.setAttribute('aria-live', 'polite');
+  localize(output, msg('zoomLevel'), 'aria-label'); output.setAttribute('aria-live', 'polite');
   const button = (label, action) => {
-    const node = document.createElement('button'); node.type = 'button'; node.textContent = label;
+    const node = document.createElement('button'); node.type = 'button'; localize(node, label);
     node.onclick = () => { action(); render(); }; return node;
   };
-  const out = button('− 縮小', () => camera.zoom(1 / 1.25));
-  const into = button('＋ 拡大', () => camera.zoom(1.25));
-  toolbar.append(out, output, into, button('リセット (100%)', () => camera.reset()), button('全体表示', () => camera.fit()));
+  const out = button(msg('zoomOut'), () => camera.zoom(1 / 1.25));
+  const into = button(msg('zoomIn'), () => camera.zoom(1.25));
+  toolbar.append(out, output, into, button(msg('resetGraph'), () => camera.reset()), button(msg('fitGraph'), () => camera.fit()));
   function render() {
     svg.setAttribute('viewBox', `0 0 ${camera.width} ${camera.height}`);
     content.setAttribute('transform', `translate(${camera.x},${camera.y}) scale(${camera.scale})`);

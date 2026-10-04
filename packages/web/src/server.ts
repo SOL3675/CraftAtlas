@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import type { Model, Scenario, Expectations, Process, CostRequest } from '../../core/src/types.ts';
 import { calculateCost } from '../../core/src/cost.ts';
 import type { CostAnalysis } from '../../core/src/cost.ts';
@@ -54,9 +54,14 @@ export function createAtlasServer(options: WebOptions): Server {
   const assets = new Map([
     ['/', ['index.html', 'text/html; charset=utf-8']],
     ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
+    ['/localization.js', ['localization.js', 'text/javascript; charset=utf-8']],
+    ['/locale-catalogs.js', ['locale-catalogs.js', 'text/javascript; charset=utf-8']],
     ['/graph-viewport.js', ['graph-viewport.js', 'text/javascript; charset=utf-8']],
     ['/style.css', ['style.css', 'text/css; charset=utf-8']],
   ]);
+  for (const file of readdirSync(new URL('../public/locales/', import.meta.url))) {
+    if (/^[a-z][a-z0-9-]*\.js$/.test(file)) assets.set(`/locales/${file}`, [`locales/${file}`, 'text/javascript; charset=utf-8']);
+  }
   return createServer({ maxHeaderSize: 327680 }, (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store');

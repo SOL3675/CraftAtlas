@@ -20,11 +20,15 @@ test('HTTP UI serves bounded search, local AND/OR graph, evidence and the same d
   const address = server.address(); assert.ok(address && typeof address === 'object');
   const base = `http://127.0.0.1:${address.port}`;
   try {
-    const index = await fetch(base); assert.equal(index.status, 200); assert.match(await index.text(), /AND \/ 候補内は OR/);
+    const index = await fetch(base); assert.equal(index.status, 200); assert.match(await index.text(), /AND between slots \/ OR within alternatives/);
     assert.match(index.headers.get('content-security-policy')!, /frame-ancestors 'none'/);
     const viewport = await fetch(base + '/graph-viewport.js');
     assert.equal(viewport.status, 200); assert.match(viewport.headers.get('content-type')!, /javascript/);
     assert.match(await viewport.text(), /export class GraphCamera/);
+    for (const path of ['/localization.js', '/locale-catalogs.js', '/locales/en.js', '/locales/ja.js']) {
+      const asset = await fetch(base + path); assert.equal(asset.status, 200, path); assert.match(asset.headers.get('content-type')!, /javascript/);
+    }
+    assert.equal((await fetch(base + '/locales/unregistered.js')).status, 404);
     const query = async (path: string) => { const response = await fetch(base + path); assert.equal(response.status, 200); return response.json(); };
     const search = await query('/api/search?limit=2&offset=1'); assert.equal(search.schemaVersion, 1); assert.equal(search.result.items.length, 2); assert.equal(search.result.truncated, true);
     const graph = await query('/api/graph?id=minecraft:diamond&depth=2&limit=30');
