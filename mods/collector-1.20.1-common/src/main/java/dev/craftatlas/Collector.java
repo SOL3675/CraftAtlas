@@ -208,12 +208,6 @@ public final class Collector {
             environment = object("captureStatus", "failed", "reasons", array(reason));
             coverage.add(coverage("environment", "recipe/tag/loot/worldgen resources/configuration/datapacks", "failed", null, null, array(reason)));
         }
-        JsonObject snapshot = object("schemaVersion", 1, "session", session, "generation", generation,
-            "mode", server.isDedicatedServer() ? "dedicated" : "integrated", "minecraft", SharedConstants.getCurrentVersion().getName(),
-            "loader", platform.loader(), "loaderVersion", platform.loaderVersion(),
-            "collectorVersion", platform.collectorVersion(),
-            "mods", mods, "environment", environment, "resources", resources, "tags", tags, "recipes", recipes, "coverage", coverage,
-            "completion", object("status", errors.isEmpty() ? "complete" : "partial", "errors", errors));
         synchronized(state(server)) {
             JsonArray attached = new JsonArray();
             for (JsonElement value : state(server).observations) {
@@ -225,6 +219,12 @@ public final class Collector {
         }
         coverage.add(coverage("observation", "finite samples", "partial", world.getAsJsonArray("observations").size(), null,
             array("Only completed matching-generation samples attach; finite observations do not prove absence, event completeness or sustainable supply")));
+        JsonObject snapshot = object("schemaVersion", 1, "session", session, "generation", generation,
+            "mode", server.isDedicatedServer() ? "dedicated" : "integrated", "minecraft", SharedConstants.getCurrentVersion().getName(),
+            "loader", platform.loader(), "loaderVersion", platform.loaderVersion(),
+            "collectorVersion", platform.collectorVersion(),
+            "mods", mods, "environment", environment, "resources", resources, "tags", tags, "recipes", recipes, "coverage", coverage,
+            "completion", object("status", errors.isEmpty() ? "complete" : "partial", "errors", errors));
         snapshot.add("world", world);
         if (datapack != null) snapshot.add("datapack", datapack);
         if (viewer != null) snapshot.add("viewer", viewer);

@@ -44,7 +44,8 @@ try {
   const directory = (label: string) => join(server.directory, 'craftatlas/observations', label);
   const observe = async (label: string, command: string) => {
     const mark = server.mark(); server.command(`craftatlas observe ${command.replace('{label}', label)}`);
-    await server.waitForOutput(new RegExp(`CRAFTATLAS OBSERVATION COMPLETE label=${label} `), 180000, mark);
+    await server.waitForOutput(new RegExp(`CRAFTATLAS OBSERVATION (?:COMPLETE|FAILED) label=${label}(?: |$)`), 180000, mark);
+    assert.ok(existsSync(join(directory(label), 'completion.json')), `Observation ${label} failed; see game logs`);
     const observation = readObservation1201(directory(label), before);
     assert.equal(observation.seed, '8675309'); assert.equal(observation.dimension, 'minecraft:overworld');
     assert.equal(observation.generator.type, 'minecraft:noise'); assert.equal(observation.player, null);
