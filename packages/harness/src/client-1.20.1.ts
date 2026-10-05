@@ -36,6 +36,25 @@ async function freePort() {
   const address = reservation.address(); if (!address || typeof address === 'string') throw new Error('No client port');
   const port = address.port; await new Promise<void>(accept => reservation.close(() => accept())); return port;
 }
+async function dumpClient(label: string) {
+  const command = `craftatlas-client dump ${label}`;
+  if (metadata.loader !== 'forge') { await adapter!.control('chat.command', { command }); return; }
+  // The 1.20.1 helper tries sendUnsignedCommand first, which bypasses Forge's
+  // client-command hook. Submit through ChatScreen's normal sendCommand path.
+  const hud = await waitFor('Forge integrated loading screen closed', async () => await adapter!.control('gui.info') as any,
+    screen => !screen.open, 30000);
+  evidence[`command-${label}`] = { command, route: 'ChatScreen', hud, key: await adapter!.control('input.key-press', { key: 't' }) };
+  const screen = await waitFor('Forge client command chat screen', async () => {
+    const screen = await adapter!.control('gui.info') as any;
+    evidence.commandScreen = screen;
+    writeFileSync(join(session, 'command-screen.json'), JSON.stringify(screen, null, 2));
+    return screen;
+  },
+    screen => screen.type === 'ChatScreen', 10000);
+  await adapter!.control('input.type', { text: '/' + command });
+  await adapter!.control('input.key-press', { key: 'enter' });
+  evidence[`command-${label}`] = { ...(evidence[`command-${label}`] as object), screen };
+}
 try {
   process.stderr.write('Atlas client: generating a fresh fixed world\n');
   await preparation.prepare(artifacts, runRoot, controller.signal);
@@ -99,7 +118,7 @@ try {
   }
   await adapter.waitReady(240000, true);
   await waitFor('Viewer runtime completion', () => readFileSync(log, 'utf8'), text => new RegExp(`CRAFTATLAS ${metadata.viewer.toUpperCase()} READY session=[a-f0-9-]+ generation=\\d+`).test(text), 180000);
-  await adapter.control('chat.command', { command: 'craftatlas-client dump integrated' });
+  await dumpClient('integrated');
   const path = join(clientDir, 'craftatlas/integrated');
   await waitFor('Fresh integrated snapshot', () => existsSync(join(path, 'completion.json')), Boolean, 180000);
   const snapshot = readSnapshot(path), model = normalize(snapshot);
@@ -108,7 +127,7 @@ try {
   const environment = snapshot.environment as Record<string, any>;
   assert.ok(Object.keys(environment.datapackResources).length > 100);
   assert.ok(environment.datapackResources['atlas:recipes/added.json']);
-  await adapter.control('chat.command', { command: 'craftatlas-client dump repeat' });
+  await dumpClient('repeat');
   const repeatPath = join(clientDir, 'craftatlas/repeat');
   await waitFor('Repeated integrated snapshot', () => existsSync(join(repeatPath, 'completion.json')), Boolean, 180000);
   const repeat = readSnapshot(repeatPath);
@@ -125,7 +144,9 @@ try {
   assert.equal(snapshot.viewer.session, snapshot.session); assert.equal(snapshot.viewer.generation, snapshot.generation);
   writeFileSync(join(session, 'viewer-fixture.json'), JSON.stringify(verify1201Viewer(snapshot), null, 2));
   assert.ok(snapshot.viewer.recipes.some(r => r.recipeId && snapshot.recipes.some(s => s.id === r.recipeId)));
-  assert.ok(snapshot.viewer.recipes.some(r => r.category === 'minecraft:smelting' && r.equipment.includes('minecraft:furnace')));
+  const furnaceCategory = metadata.viewer === 'jei' ? 'minecraft:furnace' : 'minecraft:smelting';
+  assert.ok(snapshot.viewer.recipes.some(r => r.category === furnaceCategory && r.equipment.includes('minecraft:furnace')
+    && snapshot.recipes.some(runtime => runtime.id === r.recipeId && runtime.type === 'minecraft:smelting')));
 
   assert.ok(model.evidence.some(e => e.kind === 'viewer'));
   assert.throws(() => validateSnapshot({ ...snapshot, viewer: { ...snapshot.viewer, generation: snapshot.generation - 1 } }), /generation|identity|session/i);
