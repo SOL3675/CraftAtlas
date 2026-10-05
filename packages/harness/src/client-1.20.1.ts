@@ -17,6 +17,7 @@ import { server1201, target1201 } from './targets-1.20.1.ts';
 import { verify1201, verify1201Viewer } from './fixture-1.20.1.ts';
 import { runArtifacts, saveResults, waitFor, RequiredUnsupported } from './common.ts';
 import type { Case } from './common.ts';
+import { configureObservationWorld, verifyPlayerObservations } from './player-observation-1.20.1.ts';
 
 const root = resolve(fileURLToPath(new URL('../../../', import.meta.url))), session = resolve(process.argv[2]), runRoot = resolve(process.argv[3]), target = process.argv[4];
 const cases: Case[] = [];
@@ -78,6 +79,7 @@ try {
   for (const artifact of artifacts.filter(a => ['distribution', 'runtime-dependency'].includes(a.kind) && ['both', 'client'].includes(a.side))) await adapter.deployMod(resolve(runRoot, artifact.path), artifact.sha256);
   mkdirSync(join(clientDir, 'saves'), { recursive: true });
   cpSync(join(preparation.directory, 'world'), join(clientDir, 'saves/atlas-world'), { recursive: true });
+  evidence.observationWorld = configureObservationWorld(owned(join(clientDir, 'saves/atlas-world/level.dat')), process.env.CRAFTATLAS_OBSERVATION_PERMISSION !== 'denied');
   cpSync(join(root, 'fixtures/scripts'), join(clientDir, 'scripts'), { recursive: true });
   // Modify only newly installed session metadata; installed backend bytes remain verified.
   const runtimeRoot = owned(String(client.runtimeRootDir)), versionId = String(client.runtimeVersionId);
@@ -136,6 +138,7 @@ try {
   assert.equal(normalize(repeat).contentHash, model.contentHash);
   writeFileSync(join(session,'common-fixture.json'),JSON.stringify(verifyCommonFixture(snapshot,root),null,2));
   writeFileSync(join(session,'version-fixture.json'),JSON.stringify(verify1201(snapshot),null,2));
+  evidence.playerObservations = await verifyPlayerObservations(adapter, clientDir, session, dumpClient, process.env.CRAFTATLAS_OBSERVATION_PERMISSION === 'denied');
   cases.push({ id: stage, status: 'passed', message: `Integrated runtime collected ${snapshot.recipes.length} recipes; session ${snapshot.session}` });
   stage = `atlas.${metadata.viewer}`;
   assert.ok(snapshot.viewer && snapshot.viewer.recipes.length > 100);
