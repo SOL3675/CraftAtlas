@@ -82,7 +82,7 @@ public final class WorldCollector {
             array("LivingDropsEvent, block drop events and custom Java supply paths are not fully enumerated", "Default entity loot mappings may be overridden per entity instance")));
         coverage.add(coverage("worldgen", "code spawn restrictions and observed supply rate", "unsupported", null, null,
             array("Spawn weights are not time-based supply rates", "Placement code, event restrictions and dimension travel are not inferred")));
-        coverage.add(coverage("observation", "commands", "unsupported", null, null, array("Finite observation commands are not implemented for 1.20.1; no observed supply is inferred")));
+        coverage.add(coverage("observation", "commands", "complete", 4, null, array("Bounded loot/block/entity/world commands; registration is distinct from sample acquisition", "Loot contexts do not execute actual break/death events or enumerate arbitrary hooks")));
         return object("lootTables", tables, "lootModifiers", array(), "lootSources", sources, "biomes", biomes, "dimensions", dimensions,
             "features", features, "observations", array(), "limitations", array(
                 "Registered features, active generator membership and finite observations are distinct evidence",

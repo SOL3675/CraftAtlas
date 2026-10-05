@@ -39,7 +39,7 @@ The configured collector matrix is:
 | Forge 1.20.1 | 47.3.0 | 17 | JEI 15.20.0.106 |
 | Fabric 1.20.1 | 0.16.14 / API 0.92.7+1.20.1 | 17 | EMI 1.1.24+1.20.1 |
 
-The 1.20.1 implementation has offline contract coverage; Minecraft compilation and dedicated/integrated game validation remain required on a machine with the locked dependencies and Java 17. Other versions and loader combinations are unsupported. See [usage](docs/usage.md), [data contracts and constraints](docs/contracts.md), [Fabric](docs/fabric.md), and [performance measurement](docs/performance.md).
+The 1.20.1 implementation includes bounded loot/block/entity/world observation commands with offline contract coverage; Minecraft compilation and new dedicated/integrated game validation (including `atlas-1.20.1-world` on both loaders) remain required on a machine with the locked dependencies and Java 17. Other versions and loader combinations are unsupported. See [usage](docs/usage.md), [data contracts and constraints](docs/contracts.md), [Fabric](docs/fabric.md), and [performance measurement](docs/performance.md).
 
 Supported interpretations are deliberately bounded: basic recipes on the listed targets, Mekanism enriching and TechReborn grinder on the pinned 1.21.1 packs, declared equipment/progression, selected-route costs, and portions of Loot/worldgen. Viewer display is not proof of execution. Finite observations do not prove absence or sustainable supply. Fictional equipment/progression fixtures are contract tests, not verified real-Mod behavior.
 

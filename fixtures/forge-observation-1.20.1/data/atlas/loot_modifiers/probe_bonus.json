@@ -1,0 +1,6 @@
+{
+  "type": "craftatlas:add_item",
+  "conditions": [{ "condition": "forge:loot_table_id", "loot_table_id": "atlas:probe" }],
+  "item": "minecraft:emerald",
+  "count": 1
+}

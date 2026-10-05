@@ -1,5 +1,6 @@
 package dev.craftatlas.forge;
 import dev.craftatlas.Collector;
+import dev.craftatlas.ObservationCommands;
 import dev.craftatlas.RuntimeFixture;
 
 import net.minecraftforge.fml.common.Mod;
@@ -22,6 +23,10 @@ import static dev.craftatlas.JsonFiles.*;
 @Mod("craftatlas")
 public final class CollectorMod {
     public CollectorMod() {
+        var modifiers = net.minecraftforge.registries.DeferredRegister.<com.mojang.serialization.Codec<? extends net.minecraftforge.common.loot.IGlobalLootModifier>>create(
+            net.minecraftforge.registries.ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, "craftatlas");
+        modifiers.register("add_item", () -> AddItemLootModifier.CODEC);
+        modifiers.register(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         Collector.initialize(new Collector.Platform() {
             public String loader() { return "forge"; }
             public String loaderVersion() { return ForgeVersion.getVersion(); }
@@ -48,7 +53,8 @@ public final class CollectorMod {
                 c.getSource().sendSuccess(() -> Component.literal(Collector.status(c.getSource().getServer())), false); return 1;
             }))
             .then(Commands.literal("dump").then(Commands.argument("label", StringArgumentType.word()).executes(c ->
-                Collector.dump(c.getSource(), StringArgumentType.getString(c, "label"), null)))));
+                Collector.dump(c.getSource(), StringArgumentType.getString(c, "label"), null))))
+            .then(ObservationCommands.tree(event.getBuildContext())));
     }
     private void started(ServerStartedEvent event) {
         RuntimeFixture.install(event.getServer()); Collector.started(event.getServer());

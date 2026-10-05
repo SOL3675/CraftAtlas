@@ -1,6 +1,7 @@
 package dev.craftatlas.fabric;
 import net.fabricmc.api.ModInitializer;
 import dev.craftatlas.Collector;
+import dev.craftatlas.ObservationCommands;
 import dev.craftatlas.RuntimeFixture;
 import dev.craftatlas.JsonFiles;
 import net.fabricmc.loader.api.FabricLoader;
@@ -33,6 +34,7 @@ public final class FabricAtlasMod implements ModInitializer {
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, manager, success) -> { if (success) { RuntimeFixture.install(server); Collector.reloaded(server); } });
         CommandRegistrationCallback.EVENT.register((dispatcher, context, environment) -> dispatcher.register(Commands.literal("craftatlas").requires(s -> s.hasPermission(2))
             .then(Commands.literal("status").executes(c -> { c.getSource().sendSuccess(() -> Component.literal(Collector.status(c.getSource().getServer())), false); return 1; }))
-            .then(Commands.literal("dump").then(Commands.argument("label", StringArgumentType.word()).executes(c -> Collector.dump(c.getSource(), StringArgumentType.getString(c,"label"), null))))));
+            .then(Commands.literal("dump").then(Commands.argument("label", StringArgumentType.word()).executes(c -> Collector.dump(c.getSource(), StringArgumentType.getString(c,"label"), null))))
+            .then(ObservationCommands.tree(context))));
     }
 }

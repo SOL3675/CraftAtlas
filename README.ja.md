@@ -51,7 +51,7 @@ pnpm atlas diff --before fixtures/before.json --after fixtures/after.json --json
 | レシピ変更 | 固定した CraftTweaker 21.0.38 とデータパック。KubeJS は今回の固定環境には含めない |
 | 到達分析 | シナリオ内の初期資源・設置済み設備・ステージ・ディメンション・禁止処理を使う定性分析。有限在庫で実行可能な数量付き手順は証明しない |
 | Loot / Worldgen | 実行時テーブル・参照・基本条件/関数、NeoForge / Forge の実適用 Global Loot Modifiers、適用済み biome/spawn/feature と生成器の関係。イベントや独自コード・生成率は unknown |
-| 観測 | 1.21.1 の通常生成ワールドの有限ブロック観測と Loot サンプリング。試行条件と原本を保存。供給率や不存在は証明しない。1.20.1 の観測コマンドは未対応として coverage に記録 |
+| 観測 | 1.21.1 および Forge/Fabric 1.20.1 に loot/block/entity/world の有限観測コマンドを実装。試行条件、NBT、世代・環境と原本を保存。供給率や不存在は証明しない。1.20.1 の追加実装は新しい実機検証が必要 |
 | 進行・材料コスト | 選択した経路の数量・バッチ・初期設備と反復費、触媒・耐久・返却物。明示した IID 確率モデルだけ期待値と試行分散を計算 |
 | Fabric / EMI / 追加 Mod | 1.21.1 は EMI 1.1.24+1.21.1+fabric と TechReborn 5.11.19 grinder。1.20.1 は EMI 1.1.24+1.20.1+fabric、TechReborn アダプターは対象外。実機で確認した範囲・未対応は [対応表](docs/fabric.md) を参照 |
 
@@ -97,3 +97,7 @@ node dist/packages/cli/src/main.js validate --snapshot fixtures/before.json --js
 ## ライセンス
 
 CraftAtlas 独自のコードとドキュメントには [MIT](LICENSE) を適用します（Copyright (c) 2026 SOL3675）。第三者のライセンスと著作権表示は維持します。Gradle Wrapper スクリプトの Apache-2.0 ヘッダーと JAR 内の `META-INF/LICENSE` は変更しません。依存ライブラリ、取得する Mod、Minecraft はそれぞれのライセンスに従います。ビルド時に LICENSE を `dist/` へコピーし、collector のバイナリ・ソース JAR には `META-INF/LICENSE` として同梱します。プロジェクトは引き続き未公開・`private: true` です。
+
+1.20.1 の有限観測が未対応だった理由は Minecraft の仕様上の不可能性ではなく、移植の未実装でした。`/craftatlas observe loot|block|entity|world` を両ローダーに追加しています。loot 試行は 1–1000 回、world は半径 0–1 chunk・高さ最大 64 ブロックに制限します。block/entity は Loot context の評価であり、実際の破壊・死亡イベントを発生させず、アイテムを付与しません。観測には chunk の読み込み・生成が伴う場合があります。必要な context の不足、同名出力、取得中・reload 中の要求は拒否し、reload 前の結果は新しい世代へ添付しません。
+
+追加の `atlas-1.20.1-world` Suite を Forge/Fabric の両方で実行し、続けて 4 target の release 検証を行ってください。新 Suite は 7 case を要求し、確定/空 Loot、Forge modifier、通常/Silk Touch の道具 NBT、Mob context、有限 chunk、manifest/hash、拒否と reload 無効化を実ゲームで確認します。統合ワールドのプレイヤー context と権限確認も必要です。追加実装に対するコンパイル・実機成功はまだ未確認であり、以前の PR 検証結果やオフライン契約テストでは代替できません。[手順](docs/usage.md#validate-the-1201-observation-port)を参照してください。

@@ -125,13 +125,13 @@ pnpm exec mch test --target fabric-1.20.1 --suite atlas-1.20.1-emi --json
 
 There is no separate pack-fetch script for 1.20.1: Gradle resolves the exact API/viewer coordinates and exports actual dependency JAR hashes through `harnessExport`. JEI/EMI artifacts are client-only; Fabric API is deployed on both sides. These distribution hashes are run evidence, not proof of immutable Maven contents across future downloads. The harness also deploys a separate fictional data-only fixture Mod from `fixtures/embedded-1.20.1`, built with loader-specific metadata; it is not part of the collector distribution JAR. The server suite checks its embedded JSON, world overrides, source-only conditions, runtime-only entries, repeat identity, interrupted publication, reload and failed expectations. `craftatlas.testRuntimeFixture=true` is an isolated test JVM opt-in; normal collectors do not add runtime recipes.
 
-Minecraft 1.20.1 serializers expose `fromJson`, `toNetwork` and `fromNetwork`, with no universal runtime JSON codec. Captures retain network base64/SHA-256 under each recipe's `serialization`; reviewed exact vanilla implementations additionally expose crafting, cooking, stonecutting and smithing-transform fields. Other implementations stay opaque with unsupported `recipeSerialization` coverage. Source JSON remains independent and cannot repair missing runtime semantics. NBT is retained with unknown matching/mutation behavior; JEI/EMI fluid units remain mB/droplets respectively. Forge global modifiers use a fixed 47.3.0 internal map boundary to retain applied IDs/order; arbitrary hooks remain unknown. Finite observation commands are currently unsupported on 1.20.1 and explicitly reported in coverage.
+Minecraft 1.20.1 serializers expose `fromJson`, `toNetwork` and `fromNetwork`, with no universal runtime JSON codec. Captures retain network base64/SHA-256 under each recipe's `serialization`; reviewed exact vanilla implementations additionally expose crafting, cooking, stonecutting and smithing-transform fields. Other implementations stay opaque with unsupported `recipeSerialization` coverage. Source JSON remains independent and cannot repair missing runtime semantics. NBT is retained with unknown matching/mutation behavior; JEI/EMI fluid units remain mB/droplets respectively. Forge global modifiers use a fixed 47.3.0 internal map boundary to retain applied IDs/order; arbitrary hooks remain unknown. Finite observation commands are implemented on both 1.20.1 loaders; their new real-game validation is required before treating this port as verified. The `observation/commands` coverage row describes registration of the four bounded commands; `observation/finite samples` remains partial, including when no sample has been requested.
 
 For the existing 1.21.1 regression builds, first run `node scripts/fetch-pack.ts` and `node scripts/fetch-fabric-pack.ts`, then inspect/build both existing targets and execute their required suites. Finally run `pnpm exec mch test --all --profile release --json` after all prerequisites are present. Review current Run reports, actual distribution/dependency hashes, expected IDs and raw capture artifacts. Successful TypeScript tests or pure Java parser probes establish neither Minecraft compilation nor runtime behavior.
 
 ## World observations
 
-The following observation commands apply to the existing 1.21.1 collectors.
+The following observation commands are implemented on the configured 1.21.1 collectors and Forge/Fabric 1.20.1. The 1.20.1 port still requires compilation and the dedicated/integrated game checks below; its offline tests are not game evidence.
 
 ```text
 craftatlas observe loot probe atlas:probe 10
@@ -141,7 +141,7 @@ craftatlas observe world chunk 0 0 31
 craftatlas dump after-observations
 ```
 
-Block/entity sampling evaluates loot contexts rather than actual destruction/death events and does not give player items. World observation can generate chunks: radius is 0–1, height span at most 64, and loot trials 1–1000. Each observation stores context, trials, manifests, and completion under craftatlas/observations. Reload invalidates attachment to the prior generation. These finite samples do not prove absence, sustainable supply, or survival progression.
+Block/entity sampling evaluates loot contexts rather than actual destruction/death events and does not give player items. World observation can generate chunks: radius is 0–1, height span at most 64, and loot trials 1–1000. Each observation stores context, trials, manifests, and completion under craftatlas/observations. The command source supplies the position, dimension and optional player; console observations have no player. Tool arguments retain 1.20.1 NBT, for example `minecraft:diamond_pickaxe{Enchantments:[{id:"minecraft:silk_touch",lvl:1s}]}`. Missing table parameters and nonliving entity types fail explicitly. The collector refuses busy/reloading/stopped sessions, invalid labels and overwrites; failed observations do not attach to snapshots. Reload invalidates attachment to the prior generation. These finite samples do not prove absence, sustainable supply, or survival progression.
 
 ## Selected-route materials and costs
 
@@ -151,3 +151,22 @@ pnpm atlas serve --snapshot fixtures/definition-progression-snapshot.json --defi
 ```
 
 Cost requires a scenario and request selecting routes, output indexes, OR inputs, and target units/quantity. Review UI-generated choices; they are not optimal-route guarantees. Fictional progression/equipment fixtures test semantics only. See [contracts](contracts.md) for setup/recurring costs, catalysts/durability/returns, unknown totals, probability assumptions, and result completeness. Use [performance procedures](performance.md) for measurement.
+
+### Validate the 1.20.1 observation port
+
+Use the locked Java 17 game/toolchain and existing local EULA/backend configuration; Fabric's Gradle role is Java 21. Inspect and rebuild both distribution artifacts, then execute the required seven-case observation suite for **each** loader:
+
+```console
+pnpm exec mch doctor --json
+pnpm exec mch inspect --target forge-1.20.1 --json
+pnpm exec mch build --target forge-1.20.1 --json
+pnpm exec mch test --target forge-1.20.1 --suite atlas-1.20.1-world --json
+pnpm exec mch inspect --target fabric-1.20.1 --json
+pnpm exec mch build --target fabric-1.20.1 --json
+pnpm exec mch test --target fabric-1.20.1 --suite atlas-1.20.1-world --json
+pnpm exec mch test --all --profile release --json
+```
+
+The observation suite uses real normal-generator game worlds and recorded distribution JARs. It requires deterministic and empty table sampling, Forge post-table modifier output, stone/tool and Silk Touch NBT results, unspawned zombie contexts, one/nine chunks with 32/64-block heights, checksummed publication and dump attachment, invalid requests/overwrite refusal, busy refusal, reload invalidation and fresh-generation sampling, and clean shutdown. It preserves observation JSON/manifests/completion, snapshots, SQLite, logs and artifact hashes in the Run. It does not assert random zombie drop quantities or replace missing behavior with simulated results. Both 1.20.1 release target requirements now include this suite; the full matrix has 15 required suites. Inspect all seven case IDs and statuses in each observation suite and the existing server/viewer/offline suites. The existing 1.21.1 Suite requirements are unchanged.
+
+Also check operator permission inheritance and a player-issued block/entity observation in an integrated Forge/JEI and Fabric/EMI world: player UUID/game mode/luck, actual position/dimension, held-tool NBT and player damage context must survive; no entities or items should be granted by sampling. Dedicated-console cases have `player: null` and generic damage, so they do not verify these player-specific fields. New game results must be collected for this commit; results from an earlier PR revision do not validate the port.

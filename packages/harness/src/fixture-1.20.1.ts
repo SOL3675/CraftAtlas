@@ -21,9 +21,10 @@ export function verify1201(snapshot: Snapshot) {
   assert.ok(snapshot.coverage.some(c => c.dataset === 'datapack' && c.status === 'complete'));
   assert.ok(snapshot.coverage.some(c => c.dataset === 'recipeSerialization' && c.status === 'unsupported'), 'Dynamic vanilla serializers must not acquire invented JSON');
   const observation = snapshot.coverage.find(c => c.dataset === 'observation' && c.type === 'commands');
-  assert.equal(observation?.status, 'unsupported', '1.20.1 finite observations must stay explicitly unsupported');
-  assert.ok(observation.reasons.some(reason => reason.includes('not implemented')));
-  assert.deepEqual(snapshot.world?.observations, [], 'Unsupported observation commands must not produce simulated evidence');
+  assert.equal(observation?.status, 'complete', 'All four bounded commands must be registered');
+  assert.equal(observation.enumerated, 4);
+  assert.ok(snapshot.coverage.some(row => row.dataset === 'observation' && row.type === 'finite samples' && row.status === 'partial'), 'Samples never promote exhaustive acquisition coverage');
+  assert.deepEqual(snapshot.world?.observations, [], 'No sample is fabricated before an explicit command');
   const conditional = model.processes.find(p => p.id === 'atlasfixture:conditional'); assert.ok(conditional);
   if (snapshot.loader === 'forge') assert.equal(conditional.execution, 'unconfirmed', 'Forge false condition is source-only');
   return { resources: data.resources.length, recipes: snapshot.recipes.length, selectedPacks: data.selectedPacks,

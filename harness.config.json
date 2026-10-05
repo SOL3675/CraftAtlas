@@ -73,7 +73,8 @@
       "requiredSuites": [
         "atlas-1.20.1-server",
         "atlas-1.20.1-emi",
-        "atlas-offline"
+        "atlas-offline",
+        "atlas-1.20.1-world"
       ]
     },
     "forge-1.20.1": {
@@ -98,7 +99,8 @@
       "requiredSuites": [
         "atlas-1.20.1-server",
         "atlas-1.20.1-jei",
-        "atlas-offline"
+        "atlas-offline",
+        "atlas-1.20.1-world"
       ]
     }
   },
@@ -279,6 +281,22 @@
           "{target}"
         ]
       }
+    },
+    "atlas-1.20.1-world": {
+      "kind": "server",
+      "capabilities": [
+        "dedicated-server",
+        "world-observation"
+      ],
+      "command": {
+        "executable": "node",
+        "args": [
+          "{projectRoot}/packages/harness/src/world-1.20.1.ts",
+          "{sessionRoot}",
+          "{runRoot}",
+          "{target}"
+        ]
+      }
     }
   },
   "schemaVersion": 1,
@@ -422,6 +440,26 @@
       "requiredCapabilities": [
         "integrated-server",
         "emi-runtime"
+      ]
+    },
+    "atlas-1.20.1-world": {
+      "runtime": "atlas-1.20.1-world",
+      "driver": "process",
+      "eulaRequired": true,
+      "results": "results.json",
+      "minTests": 7,
+      "expectedTests": [
+        "atlas.observation-loot",
+        "atlas.observation-block",
+        "atlas.observation-entity",
+        "atlas.observation-world",
+        "atlas.observation-rejections",
+        "atlas.observation-reload",
+        "atlas.world-stopped"
+      ],
+      "requiredCapabilities": [
+        "dedicated-server",
+        "world-observation"
       ]
     }
   }
