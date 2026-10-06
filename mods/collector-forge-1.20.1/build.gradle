@@ -1,0 +1,57 @@
+plugins { id 'java-library'; id 'net.minecraftforge.gradle' version '6.0.36' }
+version = project.mod_version
+group = 'dev.craftatlas'
+base { archivesName = 'craft-atlas-collector-forge-1.20.1' }
+repositories { mavenCentral(); maven { url = 'https://maven.blamejared.com' } }
+configurations { distributionMods { transitive = false } }
+minecraft {
+    mappings channel: 'official', version: project.minecraft_version
+    runs {
+        configureEach { workingDirectory project.file('build/run'); mods { craftatlas { source sourceSets.main } } }
+        client { }
+        server { args '--nogui' }
+    }
+}
+dependencies {
+    minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
+    compileOnly 'mezz.jei:jei-1.20.1-forge-api:15.20.0.106'
+    distributionMods 'mezz.jei:jei-1.20.1-forge:15.20.0.106'
+}
+processResources { inputs.property 'version', project.version; filesMatching('META-INF/mods.toml') { expand version: project.version } }
+tasks.named('jar') { finalizedBy 'reobfJar'; manifest.attributes('MixinConfigs': 'craftatlas.mixins.json') }
+ext.harnessExportSpec = [
+    target: 'forge-1.20.1', loader: 'forge', java: 17, declaredMinecraft: project.minecraft_version,
+    artifactTasks: ['jar', 'reobfJar', 'copyRuntimeDependencies', 'copySharedSources', 'embeddedFixtureJar'],
+    resolved: {
+        def dependency = configurations.minecraft.incoming.resolutionResult.allComponents.find {
+            it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier && it.id.group == 'net.minecraftforge' && it.id.module == 'forge'
+        }
+        if (dependency == null) throw new GradleException('Cannot resolve net.minecraftforge:forge')
+        def versions = dependency.id.version.replaceFirst(/_mapped_.*/, '').split('-', 2)
+        [minecraft: versions[0], loaderVersion: versions[1], mappings: 'mojang:' + versions[0]]
+    },
+    artifacts: { [[file: tasks.jar.archiveFile.get().asFile, kind: 'distribution', side: 'both'], [file: tasks.embeddedFixtureJar.archiveFile.get().asFile, kind: 'runtime-dependency', side: 'both']] + configurations.distributionMods.files.collect {
+        [file: layout.buildDirectory.file('pack/' + it.name).get().asFile, kind: 'runtime-dependency', side: 'client']
+    } },
+    classpath: { sourceSets.main.compileClasspath.files }, sources: ['src/main/java', 'build/shared/java']
+]
+java { toolchain.languageVersion = JavaLanguageVersion.of(17); withSourcesJar() }
+tasks.withType(JavaCompile).configureEach { options.release = 17; options.encoding = 'UTF-8' }
+tasks.withType(AbstractArchiveTask).configureEach { preserveFileTimestamps = false; reproducibleFileOrder = true }
+tasks.withType(Jar).configureEach { from('../../LICENSE') { into 'META-INF' } }
+tasks.register('copySharedSources', Copy) {
+    from('../collector-1.20.1-common/src/main/java')
+    from('../collector/src/main/java') { include 'dev/craftatlas/JsonFiles.java', 'dev/craftatlas/DatapackCollector.java' }
+    into layout.buildDirectory.dir('shared/java')
+}
+sourceSets.main.java.srcDir(layout.buildDirectory.dir('shared/java'))
+tasks.named('compileJava') { dependsOn 'copySharedSources' }
+tasks.named('sourcesJar') { dependsOn 'copySharedSources' }
+tasks.register('copyRuntimeDependencies', Copy) { from configurations.distributionMods; into layout.buildDirectory.dir('pack') }
+apply from: 'gradle/harness-export.gradle'
+tasks.register('embeddedFixtureJar', Jar) {
+    archiveBaseName = 'atlas-embedded-fixture-forge-1.20.1'
+    archiveClassifier = ''
+    from('../../fixtures/embedded-1.20.1')
+    from('src/test/embedded')
+}

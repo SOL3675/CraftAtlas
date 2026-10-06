@@ -1,85 +1,61 @@
 # CraftAtlas
 
-[English](README.md) | [開発手順](docs/development.md)。CraftFoundry の固定コミットから未公開パッケージを生成して利用します。tarball やビルド成果物は Git に含めません。
+[English](README.md)
 
-Minecraft Java の実行時レシピ・タグを保存し、ゲーム終了後も取得経路、変更差分、期待条件を調べるローカルツールです。Java の収集 Mod と、TypeScript の正規化・SQLite・CLI・Web UI を分離しています。
-
-対象は **Minecraft 1.21.1 / Java 21** の NeoForge 21.1.252 と Fabric Loader 0.16.14。対応範囲は [契約と制約](docs/contracts.md) と [Fabric 手順](docs/fabric.md) を参照してください。未取得・未解釈を「存在しない」「入手不能」に変換しません。
+CraftAtlas は Minecraft Java のレシピ・タグ・ワールドデータを保存し、ゲーム終了後も取得経路、必要条件、材料コスト、変更差分を調べられるツールです。CLI または読み取り専用のローカル Web UI を使用します。未取得・未解釈のデータは unknown のまま扱います。
 
 ## オフラインで試す
 
-Node.js 24 と pnpm 11.19.0 を使用します。以下はリポジトリのルートで実行します。保存済み fixture の表示には Minecraft や Java は不要です。
+Git、Node.js 24.19.0、npm 11.9.0、pnpm 11.19.0 を使用します。リポジトリのルートで以下を実行すると、インストールして同梱のサンプルデータを表示できます。この例には Minecraft や Java は不要です。
 
-```powershell
-node scripts/prepare-foundry.mjs --source ../CraftFoundry
+```console
+node scripts/prepare-foundry.mjs
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm check
-pnpm test
 pnpm atlas serve --snapshot fixtures/after.json --scenario fixtures/scenario.json --before fixtures/before.json
 ```
 
-表示された [ローカル UI](http://127.0.0.1:4317) を開き、`diamond` を検索してください。資源と処理の局所グラフ、AND / OR、数量、設備、根拠、未知条件を確認できます。検索の Mod フィルターは表示だけを変更し、分析の禁止経路には影響しません。
+[ローカル UI](http://127.0.0.1:4317) を開き、`diamond` を検索してください。数量、AND / OR、設備、根拠、未知条件を確認できます。終了は Ctrl+C です。Mod フィルターは表示を変更し、分析の制限はシナリオから設定します。変更比較では `--before` に旧スナップショット、`--snapshot` に新スナップショットを指定します。
 
-変更比較では、`--before` に旧スナップショット、`--snapshot` に新スナップショットを指定します。
+最初のコマンドは固定した CraftFoundry 依存を取得します。既存のチェックアウトを使う場合は `--source ../CraftFoundry` を追加してください。復元・ビルド・テストの手順は [セットアップと開発](docs/development.md) を参照してください。
 
-```powershell
+## CLI と実ゲームの収集
+
+```console
+pnpm atlas validate --snapshot fixtures/before.json --json
 pnpm atlas import --snapshot fixtures/before.json --db .harness/demo.sqlite --json
 pnpm atlas sources minecraft:diamond --db .harness/demo.sqlite --json
 pnpm atlas explain minecraft:diamond --snapshot fixtures/before.json --scenario fixtures/scenario.json --json
 pnpm atlas diff --before fixtures/before.json --after fixtures/after.json --json
 ```
 
-詳しいコマンド、実ゲーム収集、ハーネス接続は [使い方](docs/usage.md)、データの意味と機械可読出力は [契約](docs/contracts.md) に記載しています。
+コマンドと実ゲームデータの収集は [使い方](docs/usage.md) を参照してください。対応する収集 Mod を導入し、オペレーターとして `/craftatlas dump <label>` を実行して収集完了を待ちます。`--snapshot` のサンプル JSON パスは、完了済みの収集ディレクトリに置き換えられます。任意の JEI/EMI 収集は統合ワールドで利用できます。専用サーバーに接続したリモートクライアントのビューア収集は未対応です。
 
-## 対応範囲
+サーバーのダンプは JEI/EMI を使わずに、有効な Mod 同梱データパックのレシピ JSON 原本と上書きの由来も保存します。`atlas datapack` で確認できます。任意のカスタム JSON ディレクトリは [収集設定](docs/usage.md#fixed-collectors) を参照してください。原本 JSON の収集は、レシピの登録や実行可能性を証明するものではありません。
+
+Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力・出力・条件を記述できます。定義の作成、タグ展開、参照と解釈の制約は [データ契約](docs/contracts.md) を参照してください。未検証の Java hook は unknown を維持します。
+
+## 対応環境と制約
+
+| 対象 | ローダー / API | Java | 任意のビューア |
+| --- | --- | --- | --- |
+| NeoForge 1.21.1 | 21.1.252 | 21 | JEI 19.22.1.316 |
+| Fabric 1.21.1 | 0.16.14 / API 0.116.17+1.21.1 | 21 | EMI 1.1.24+1.21.1+fabric |
+| Forge 1.20.1 | 47.3.0 | 17 | JEI 15.20.0.106 |
+| Fabric 1.20.1 | 0.16.14 / API 0.92.7+1.20.1 | 17 | EMI 1.1.24+1.20.1+fabric |
+
+他のバージョン・ローダーの組み合わせは未対応です。環境別の詳細は [1.20.1 の使い方](docs/usage.md#forge-and-fabric-1201) と [Fabric 手順](docs/fabric.md) を参照してください。
 
 | 領域 | 現在の範囲 |
 | --- | --- |
-| サーバー収集 | 両ローダーの専用・統合サーバー。アイテム / 流体 / ブロック / Mob、タグ、適用後レシピ、環境ハッシュ |
-| 基本レシピ | 対象版の crafting、smelting 等。特殊・動的レシピ、独自述語は原本と未知理由を保持 |
-| JEI | 19.22.1.316。統合サーバーと同じセッション・取得世代での任意収集。専用サーバーへ接続したリモートクライアントのビューア収集は未対応 |
-| 機械アダプター | Mekanism 10.7.14.79 の enriching の入出力と数量。動作には未解析の電力供給条件が残り、エネルギー・時間の総コストは確定しない。他の Mekanism レシピ型は opaque |
-| レシピ変更 | 固定した CraftTweaker 21.0.38 とデータパック。KubeJS は今回の固定環境には含めない |
-| 到達分析 | シナリオ内の初期資源・設置済み設備・ステージ・ディメンション・禁止処理を使う定性分析。有限在庫で実行可能な数量付き手順は証明しない |
-| Loot / Worldgen | 実行時テーブル・参照・基本条件/関数、NeoForge の実適用 Global Loot Modifiers、適用済み biome/spawn/feature と生成器の関係。イベントや独自コード・生成率は unknown |
-| 観測 | 通常生成ワールドの有限ブロック観測と Loot サンプリング。試行条件と原本を保存。供給率や不存在は証明しない |
-| 進行・材料コスト | 選択した経路の数量・バッチ・初期設備と反復費、触媒・耐久・返却物。明示した IID 確率モデルだけ期待値と試行分散を計算 |
-| Fabric / EMI / 追加 Mod | EMI 1.1.24+1.21.1+fabric と TechReborn 5.11.19 grinder。実機で確認した範囲・未対応は [対応表](docs/fabric.md) を参照 |
+| サーバー収集 | 上記 4 構成の専用・統合サーバー。アイテム、流体、ブロック、Mob、タグ、適用後レシピ、環境ハッシュ |
+| 基本レシピ | crafting、smelting 等の対応する vanilla 型。特殊・動的レシピ、独自述語は原本と未知理由を保持 |
+| 機械アダプター | 固定した 1.21.1 Pack の Mekanism enriching と TechReborn grinder。他の機械型は opaque で、供給電力や経過時間は確定しない |
+| 到達分析 | シナリオ内の初期資源、設置済み設備、ステージ、ディメンション、禁止処理を使う定性分析。有限在庫で実行可能な手順は証明しない |
+| Loot / Worldgen | 実行時テーブル、参照、基本条件/関数、NeoForge / Forge の実適用 Global Loot Modifiers、biome/spawn/feature の関係。任意のイベント、独自コード、生成率は unknown |
+| 観測 | 上記環境で loot/block/entity/world の有限サンプルを収集。記録した context と結果は、不存在、生成率、持続可能な供給を証明しない |
+| 進行・材料コスト | 宣言した必要条件と選択経路の数量、バッチ、初期設備・反復費、触媒、耐久、返却物。期待値と試行分散は明示した IID 確率モデルが必要 |
 
-[固定依存](fixtures/pack.lock.json) は配布ファイルと SHA-256 を記録します。同梱の [設備定義](definitions/fixture-equipment.json) は架空の設備を使うオフライン契約 fixture であり、実 Mod の設備構築や儀式を検証した証拠ではありません。
-
-[進行 fixture](definitions/fixture-progression.json) も架空の召喚・魔法陣・ディメンション解放を扱う契約検証です。材料コストは次の例で確認できます。
-
-```powershell
-pnpm atlas cost --snapshot fixtures/definition-progression-snapshot.json --definitions definitions/fixture-progression.json --scenario fixtures/definition-progression-scenario.json --request fixtures/definition-progression-cost-request.json --json
-pnpm atlas serve --snapshot fixtures/definition-progression-snapshot.json --definitions definitions/fixture-progression.json --scenario fixtures/definition-progression-scenario.json --request fixtures/definition-progression-cost-request.json
-```
-
-Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力・出力・条件を記述できます。独自 serializer の解釈状態、キャプチャに基づくタグ展開、参照検証と coverage の扱いは [定義契約](docs/contracts.md)、Foundry との開発チェックは [開発手順](docs/development.md#mod-acquisition-definitions) を参照してください。未検証の Java hook は unknown を維持します。
-
-サーバーのダンプでは、JEI/EMI を使わずに、有効な Mod 同梱データパックのレシピ JSON 原本と上書きの由来も保存します。`atlas datapack` で確認できます。任意のカスタム JSON ディレクトリの収集設定と定義の作成方法は [使い方](docs/usage.md#fixed-collectors) を参照してください。原本の収集は、レシピの登録や実行可能性を証明するものではありません。
-
-性能の測定方法と予算は [性能測定](docs/performance.md) を参照してください。
-
-## 構成
-
-| パス | 責務 |
-| --- | --- |
-| `mods/collector/` | Gradle Wrapper、NeoForge 収集 Mod、任意 JEI 連携 |
-| `mods/collector-fabric/` | 独立 Gradle Wrapper、Fabric 収集 Mod、任意 EMI 連携 |
-| `schemas/` / `packages/core/` | 原本・共通モデルの契約、正規化、SQLite、分析、監査、差分、定義の適用 |
-| `packages/cli/` / `packages/web/` | CLI / JSON、読み取り専用のローカル UI |
-| `packages/harness/` | process Suite のゲーム起動・準備・収集・終了と新規結果の保存 |
-| `fixtures/` / `definitions/` | 固定 Pack、変更 fixture、シナリオ、期待条件、補足定義 |
-
-```powershell
-pnpm build
-node dist/packages/cli/src/main.js validate --snapshot fixtures/before.json --json
-```
-
-ビルドは JavaScript と併せて `dist/schemas/` と `dist/packages/web/public/` を生成します。配布した CLI でも同じスキーマと UI を使用できます。
-
-ソース取得には Git、ビルドには npm 11.9.0 と Node 24.19.0 が必要です。`--source` を省略すると記録済み origin から固定コミットを取得します。Windows でも同じ Node コマンドを使えます。将来 `CraftFoundry/projects/craft-atlas` に配置する場合は `--source ../..` を指定します。
+ビューア表示は実行の証明ではありません。Forge 1.20.1 の JEI 流体収集は実行時未検証です。結果の解釈は [データ契約と制約](docs/contracts.md)、測定方法と予算は [性能測定](docs/performance.md) を参照してください。
 
 ## ライセンス
 

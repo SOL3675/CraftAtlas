@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-forge-1.20.1",
+  "session": "test-session",
+  "generation": 0,
+  "mode": "dedicated",
+  "minecraft": "1.20.1",
+  "loader": "forge",
+  "loaderVersion": "47.3.0",
+  "collectorVersion": "0.1.0",
+  "mods": [
+    {
+      "id": "atlasfixture",
+      "version": "1.0.0"
+    }
+  ],
+  "environment": {
+    "datapacks": [
+      "vanilla",
+      "fixture"
+    ]
+  },
+  "resources": [
+    {
+      "id": "minecraft:dirt",
+      "kind": "item",
+      "name": "dirt",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:cobblestone",
+      "kind": "item",
+      "name": "cobblestone",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:stick",
+      "kind": "item",
+      "name": "stick",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:diamond",
+      "kind": "item",
+      "name": "diamond",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:iron_ingot",
+      "kind": "item",
+      "name": "iron_ingot",
+      "evidence": []
+    },
+    {
+      "id": "minecraft:gold_ingot",
+      "kind": "item",
+      "name": "gold_ingot",
+      "evidence": []
+    },
+    {
+      "id": "mekanism:enrichment_chamber",
+      "kind": "item",
+      "name": "Enrichment chamber",
+      "evidence": []
+    }
+  ],
+  "tags": {
+    "atlas:materials": [
+      "minecraft:dirt",
+      "minecraft:cobblestone"
+    ],
+    "atlas:empty": []
+  },
+  "recipes": [
+    {
+      "id": "atlas:diamond",
+      "type": "minecraft:crafting_shapeless",
+      "data": {
+        "type": "minecraft:crafting_shapeless",
+        "ingredients": [
+          {
+            "item": "minecraft:dirt"
+          }
+        ],
+        "result": {
+          "item": "minecraft:diamond",
+          "count": 2
+        }
+      },
+      "serialization": {
+        "encoding": "recipe-network-1.20.1",
+        "bytesBase64": "AAEC",
+        "sha256": "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc",
+        "limitations": [
+          "Synthetic serializer bytes; not a Minecraft execution"
+        ]
+      }
+    },
+    {
+      "id": "atlas:runtime_only",
+      "type": "atlas:custom",
+      "data": null,
+      "serialization": {
+        "encoding": "recipe-network-1.20.1",
+        "bytesBase64": "AAEC",
+        "sha256": "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc",
+        "limitations": [
+          "Synthetic serializer bytes; not a Minecraft execution"
+        ]
+      }
+    }
+  ],
+  "coverage": [
+    {
+      "dataset": "recipes",
+      "type": "*",
+      "status": "complete",
+      "enumerated": 2,
+      "interpreted": null,
+      "reasons": []
+    },
+    {
+      "dataset": "datapack",
+      "type": "recipes,machines",
+      "status": "complete",
+      "enumerated": 4,
+      "interpreted": null,
+      "reasons": []
+    },
+    {
+      "dataset": "recipeSerialization",
+      "type": "atlas:runtime_only",
+      "status": "unsupported",
+      "enumerated": 1,
+      "interpreted": null,
+      "reasons": [
+        "Custom runtime JSON encoder unavailable; network bytes retained"
+      ]
+    }
+  ],
+  "completion": {
+    "status": "complete",
+    "errors": []
+  },
+  "datapack": {
+    "directories": [
+      "recipes",
+      "machines"
+    ],
+    "selectedPacks": [
+      "vanilla",
+      "mod:atlasfixture",
+      "file/override"
+    ],
+    "loadedPacks": [
+      "vanilla",
+      "mod/embedded",
+      "file/override"
+    ],
+    "disabledPacks": [
+      "file/disabled"
+    ],
+    "resources": [
+      {
+        "id": "atlas:recipes/diamond.json",
+        "effective": {
+          "source": "file/override",
+          "text": "{\"type\":\"minecraft:crafting_shapeless\",\"ingredients\":[{\"item\":\"minecraft:dirt\"}],\"result\":{\"item\":\"minecraft:diamond\",\"count\":2}}",
+          "data": {
+            "type": "minecraft:crafting_shapeless",
+            "ingredients": [
+              {
+                "item": "minecraft:dirt"
+              }
+            ],
+            "result": {
+              "item": "minecraft:diamond",
+              "count": 2
+            }
+          },
+          "sha256": "ffddcecc38bd89b6e2c5714d56f6cf3ec8b13c5d59d67994d5e66f192a29a7c1"
+        },
+        "stack": [
+          {
+            "source": "mod/embedded",
+            "text": "{\"type\":\"minecraft:crafting_shapeless\",\"ingredients\":[{\"item\":\"minecraft:dirt\"}],\"result\":{\"item\":\"minecraft:diamond\",\"count\":1}}",
+            "data": {
+              "type": "minecraft:crafting_shapeless",
+              "ingredients": [
+                {
+                  "item": "minecraft:dirt"
+                }
+              ],
+              "result": {
+                "item": "minecraft:diamond",
+                "count": 1
+              }
+            },
+            "sha256": "805692b21a4d304e92d5188e16a44ac08216c009135754eb0d502e7fe461d79b"
+          },
+          {
+            "source": "file/override",
+            "text": "{\"type\":\"minecraft:crafting_shapeless\",\"ingredients\":[{\"item\":\"minecraft:dirt\"}],\"result\":{\"item\":\"minecraft:diamond\",\"count\":2}}",
+            "data": {
+              "type": "minecraft:crafting_shapeless",
+              "ingredients": [
+                {
+                  "item": "minecraft:dirt"
+                }
+              ],
+              "result": {
+                "item": "minecraft:diamond",
+                "count": 2
+              }
+            },
+            "sha256": "ffddcecc38bd89b6e2c5714d56f6cf3ec8b13c5d59d67994d5e66f192a29a7c1"
+          }
+        ]
+      },
+      {
+        "id": "atlas:recipes/source_only.json",
+        "effective": {
+          "source": "mod/embedded",
+          "text": "{\"type\":\"atlas:opaque\",\"inputs\":[\"minecraft:dirt\"],\"result\":{\"item\":\"minecraft:diamond\"}}",
+          "data": {
+            "type": "atlas:opaque",
+            "inputs": [
+              "minecraft:dirt"
+            ],
+            "result": {
+              "item": "minecraft:diamond"
+            }
+          },
+          "sha256": "ad7c9469e94f180b80c3fd5cfd195086adba4f03c8ecb1d6e392592652c47386"
+        },
+        "stack": [
+          {
+            "source": "mod/embedded",
+            "text": "{\"type\":\"atlas:opaque\",\"inputs\":[\"minecraft:dirt\"],\"result\":{\"item\":\"minecraft:diamond\"}}",
+            "data": {
+              "type": "atlas:opaque",
+              "inputs": [
+                "minecraft:dirt"
+              ],
+              "result": {
+                "item": "minecraft:diamond"
+              }
+            },
+            "sha256": "ad7c9469e94f180b80c3fd5cfd195086adba4f03c8ecb1d6e392592652c47386"
+          }
+        ]
+      },
+      {
+        "id": "atlas:recipes/conditional.json",
+        "effective": {
+          "source": "mod/embedded",
+          "text": "{\"type\":\"minecraft:crafting_shapeless\",\"ingredients\":[{\"item\":\"minecraft:dirt\"}],\"result\":{\"item\":\"minecraft:diamond\",\"count\":2},\"forge:conditions\":[{\"type\":\"forge:false\"}]}",
+          "data": {
+            "type": "minecraft:crafting_shapeless",
+            "ingredients": [
+              {
+                "item": "minecraft:dirt"
+              }
+            ],
+            "result": {
+              "item": "minecraft:diamond",
+              "count": 2
+            },
+            "forge:conditions": [
+              {
+                "type": "forge:false"
+              }
+            ]
+          },
+          "sha256": "e53bb52bd4db63b93c638cb6512198c98fef60be8975e2f4712562eb9df98f8a"
+        },
+        "stack": [
+          {
+            "source": "mod/embedded",
+            "text": "{\"type\":\"minecraft:crafting_shapeless\",\"ingredients\":[{\"item\":\"minecraft:dirt\"}],\"result\":{\"item\":\"minecraft:diamond\",\"count\":2},\"forge:conditions\":[{\"type\":\"forge:false\"}]}",
+            "data": {
+              "type": "minecraft:crafting_shapeless",
+              "ingredients": [
+                {
+                  "item": "minecraft:dirt"
+                }
+              ],
+              "result": {
+                "item": "minecraft:diamond",
+                "count": 2
+              },
+              "forge:conditions": [
+                {
+                  "type": "forge:false"
+                }
+              ]
+            },
+            "sha256": "e53bb52bd4db63b93c638cb6512198c98fef60be8975e2f4712562eb9df98f8a"
+          }
+        ]
+      },
+      {
+        "id": "atlas:machines/press.json",
+        "effective": {
+          "source": "mod/embedded",
+          "text": "{\"type\":\"atlas:opaque\",\"inputs\":[\"minecraft:dirt\"],\"result\":{\"item\":\"minecraft:diamond\"}}",
+          "data": {
+            "type": "atlas:opaque",
+            "inputs": [
+              "minecraft:dirt"
+            ],
+            "result": {
+              "item": "minecraft:diamond"
+            }
+          },
+          "sha256": "ad7c9469e94f180b80c3fd5cfd195086adba4f03c8ecb1d6e392592652c47386"
+        },
+        "stack": [
+          {
+            "source": "mod/embedded",
+            "text": "{\"type\":\"atlas:opaque\",\"inputs\":[\"minecraft:dirt\"],\"result\":{\"item\":\"minecraft:diamond\"}}",
+            "data": {
+              "type": "atlas:opaque",
+              "inputs": [
+                "minecraft:dirt"
+              ],
+              "result": {
+                "item": "minecraft:diamond"
+              }
+            },
+            "sha256": "ad7c9469e94f180b80c3fd5cfd195086adba4f03c8ecb1d6e392592652c47386"
+          }
+        ]
+      }
+    ],
+    "limitations": [
+      "Offline contract fixture; no universal acquisition proof"
+    ]
+  }
+}

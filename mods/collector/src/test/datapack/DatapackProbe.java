@@ -18,6 +18,7 @@ public final class DatapackProbe {
             JsonObject snapshot = JsonParser.parseString(Files.readString(Path.of(args[1]))).getAsJsonObject();
             Path target = Path.of(args[2]); Files.move(JsonFiles.stage(target, snapshot, object()), target); return;
         }
+        String recipeDirectory = args.length > 2 ? args[2] : "recipe";
         Path archive = Files.createTempFile("atlas-embedded-", ".jar"), fixture = Path.of(args[0]);
         try (var output = new ZipOutputStream(Files.newOutputStream(archive)); var files = Files.walk(fixture)) {
             for (Path file : files.filter(Files::isRegularFile).sorted().toList()) {
@@ -41,30 +42,30 @@ public final class DatapackProbe {
                         if (id != null) stacks.computeIfAbsent(id, key -> new ArrayList<>()).add(new DatapackCollector.Resource("file/override", () -> Files.newInputStream(file)));
                     }
                 }
-                if (directory.equals("recipe")) {
-                    stacks.put("atlas:recipe/unreadable.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> { throw new IOException("Injected read failure"); })));
-                    stacks.put("atlas:recipe/invalid_utf8.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream(new byte[] { (byte)0xff }))));
-                    stacks.put("atlas:recipe/trailing.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream("{} {}".getBytes(StandardCharsets.UTF_8)))));
-                    stacks.put("atlas:recipe/permissive.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream("{unquoted:1}".getBytes(StandardCharsets.UTF_8)))));
-                    stacks.put("atlas:recipe/overflow.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream("{\"number\":1e1000}".getBytes(StandardCharsets.UTF_8)))));
+                if (directory.equals(recipeDirectory)) {
+                    stacks.put("atlas:" + recipeDirectory + "/unreadable.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> { throw new IOException("Injected read failure"); })));
+                    stacks.put("atlas:" + recipeDirectory + "/invalid_utf8.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream(new byte[] { (byte)0xff }))));
+                    stacks.put("atlas:" + recipeDirectory + "/trailing.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream("{} {}".getBytes(StandardCharsets.UTF_8)))));
+                    stacks.put("atlas:" + recipeDirectory + "/permissive.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream("{unquoted:1}".getBytes(StandardCharsets.UTF_8)))));
+                    stacks.put("atlas:" + recipeDirectory + "/overflow.json", List.of(new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream("{\"number\":1e1000}".getBytes(StandardCharsets.UTF_8)))));
                 }
                 Map<String, DatapackCollector.ResourceStack> result = new TreeMap<>();
-                stacks.forEach((id, stack) -> result.put(id, new DatapackCollector.ResourceStack(stack.getLast(), stack)));
-                if (directory.equals("recipe")) {
+                stacks.forEach((id, stack) -> result.put(id, new DatapackCollector.ResourceStack(stack.get(stack.size() - 1), stack)));
+                if (directory.equals(recipeDirectory)) {
                     var winner = new DatapackCollector.Resource("selected", () -> new ByteArrayInputStream("{\"type\":\"atlas:chosen\"}".getBytes(StandardCharsets.UTF_8)));
                     var other = new DatapackCollector.Resource("other", () -> new ByteArrayInputStream("{\"type\":\"atlas:other\"}".getBytes(StandardCharsets.UTF_8)));
-                    result.put("atlas:recipe/nonlast.json", new DatapackCollector.ResourceStack(winner, List.of(winner, other)));
+                    result.put("atlas:" + recipeDirectory + "/nonlast.json", new DatapackCollector.ResourceStack(winner, List.of(winner, other)));
                 }
                 return result;
             };
             JsonObject data = DatapackCollector.capture(source, List.of("mod:atlas", "file/override"), List.of("mod/embedded", "file/override"),
-                List.of("mod:atlas", "file/override", "file/disabled"), "machines,recipe,unavailable", coverage, errors);
+                List.of("mod:atlas", "file/override", "file/disabled"), recipeDirectory, "machines," + recipeDirectory + ",unavailable", coverage, errors);
             if (errors.isEmpty()) throw new AssertionError("Faults were lost");
-            if (!DatapackCollector.directories("").equals(List.of("recipe"))) throw new AssertionError("Default recipe directory lost");
+            if (!DatapackCollector.directories(recipeDirectory, "").equals(List.of(recipeDirectory))) throw new AssertionError("Default recipe directory lost");
             JsonArray parseCoverage = new JsonArray(), parseErrors = new JsonArray();
             var malformed = new DatapackCollector.Resource("mod/embedded", () -> new ByteArrayInputStream("{".getBytes(StandardCharsets.UTF_8)));
-            DatapackCollector.capture(directory -> Map.of("atlas:recipe/bad.json", new DatapackCollector.ResourceStack(malformed, List.of(malformed))),
-                List.of("mod:atlas"), List.of("mod/embedded"), List.of("mod:atlas"), "", parseCoverage, parseErrors);
+            DatapackCollector.capture(directory -> Map.of("atlas:" + recipeDirectory + "/bad.json", new DatapackCollector.ResourceStack(malformed, List.of(malformed))),
+                List.of("mod:atlas"), List.of("mod/embedded"), List.of("mod:atlas"), recipeDirectory, "", parseCoverage, parseErrors);
             if (!parseCoverage.get(0).getAsJsonObject().get("status").getAsString().equals("complete") || parseErrors.isEmpty()) throw new AssertionError("Raw bytes and parsing coverage were conflated");
             for (String invalid : List.of("../recipe", "/recipe", "recipe/", "recipe,,other")) {
                 try { DatapackCollector.directories(invalid); throw new AssertionError("Accepted directory " + invalid); }

@@ -26,7 +26,7 @@ export function normalizeWorld(model: Model, snapshot: Snapshot): void {
   };
   const evidence = (group: string, record: RawRecipe, kind: 'runtime' | 'observation' = 'runtime') => {
     const id = `${kind}:world:${group}:${record.id}`;
-    model.evidence.push({ id, kind, source: snapshot.id, adapter: `${snapshot.loader}-world-1.21.1-v1`, pointer: `world/${group}/${record.id}` });
+    model.evidence.push({ id, kind, source: snapshot.id, adapter: `${snapshot.loader}-world-${snapshot.minecraft}-v1`, pointer: `world/${group}/${record.id}` });
     return id;
   };
   const tableById = new Map(world.lootTables.map(r => [r.id, r]));

@@ -1,0 +1,2 @@
+pluginManagement { repositories { maven { url = 'https://maven.minecraftforge.net/' }; gradlePluginPortal(); mavenCentral() } }
+rootProject.name = 'craft-atlas-collector-forge-1.20.1'

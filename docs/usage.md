@@ -1,6 +1,6 @@
 # Usage
 
-Start with [development setup](development.md), including the Foundry bootstrap before frozen install. Commands run from the repository root. Saved data requires Node 24; Java collectors additionally need Java 21.
+Start with [development setup](development.md), including the Foundry bootstrap before frozen install. Commands run from the repository root. Saved data requires Node 24; Java collectors additionally need Java 21 for 1.21.1 or Java 17 for 1.20.1.
 
 ## Saved snapshots and local UI
 
@@ -25,7 +25,7 @@ UI defaults to http://127.0.0.1:4317; `--port` changes the port, and `--host` on
 
 The graph starts at 100% for readable labels even with many nodes. Use the labeled zoom buttons (5–400%), drag inside the diagram to pan, or Ctrl/Command + wheel to zoom around the pointer. Ordinary wheel scrolling still scrolls the page. Reset restores 100% at the top of the graph; Fit shows all nodes and follows viewport resizing. With the diagram focused, arrow keys pan, +/− zoom, 0/Home reset, and F fits. Nodes still open with a click or Enter/Space; dragging does not select them. Selecting another resource or changing depth/direction starts a fresh view.
 
-`pnpm fixture` regenerates small offline fixtures; it is a development operation, not a game capture. `pnpm build` also permits `node dist/packages/cli/src/main.js` instead of the source CLI.
+`pnpm build` also permits `node dist/packages/cli/src/main.js` instead of the source CLI.
 
 ## Fixed collectors
 
@@ -48,7 +48,7 @@ craftatlas dump changed
 
 Wait for loading/reload completion and both `CRAFTATLAS COMPLETE` and `craftatlas/<label>/completion.json`. Use a new label; existing captures are not overwritten. With ready JEI in an integrated world, `/craftatlas-client dump integrated` adds viewer data. Dedicated-server remote viewer capture is unsupported. Stale session/generation viewer data is rejected; use server-only capture or a fresh integrated session when viewer readiness does not match.
 
-Server dumps on both 1.21.1 loaders also write `datapack.json`, independently of JEI/EMI. It preserves active Mod-embedded and world datapack recipe JSON, original text/hashes, the effective resource and visible override stack. Inspect it with:
+Server dumps on all four configured targets also write `datapack.json`, independently of JEI/EMI. It preserves active Mod-embedded and world datapack recipe JSON, original text/hashes, the effective resource and visible override stack. Inspect it with:
 
 ```console
 pnpm atlas datapack --snapshot craftatlas/baseline --limit 30 --json
@@ -56,57 +56,33 @@ pnpm atlas datapack example:recipe/press.json --snapshot craftatlas/baseline --j
 pnpm atlas inspect example:press --snapshot craftatlas/baseline --json
 ```
 
-For a Mod with a separate server JSON directory, add `-Dcraftatlas.resourceDirectories=machines,example/acquisition` to the game JVM arguments before startup. Directories are paths **below** `data/<namespace>/`; `recipe` is always included. This opt-in capture does not interpret custom recipe APIs. Only `.json` resources in these directories are dumped. Selected/loaded pack IDs and disabled pack IDs are recorded, but disabled-pack contents and client assets are excluded.
+For a Mod with a separate server JSON directory, add `-Dcraftatlas.resourceDirectories=machines,example/acquisition` to the game JVM arguments before startup. Directories are paths **below** `data/<namespace>/`; the standard recipe directory is always included: `recipes` for 1.20.1 and `recipe` for 1.21.1. This opt-in capture does not interpret custom recipe APIs. Only `.json` resources in these directories are dumped. Selected/loaded pack IDs and disabled pack IDs are recorded, but disabled-pack contents and client assets are excluded.
 
 Use the effective JSON and runtime entry to author a version-scoped `--definitions` pack following [definition contracts](contracts.md). An unknown serializer stays opaque. A recipe resource absent from RecipeManager remains unconfirmed, even with vanilla-looking fields; inspect conditions, the custom loader/API and machine behavior before declaring reviewed inputs, outputs or `execution: "executable"`. A custom-directory resource has no assumed recipe ID convention: use an explicit definition addition after reviewing its behavior. Source JSON and raw capture coverage survive overlays. Older dumps have no raw dataset; `atlas datapack` reports `captured: false`.
 
 ## Harness setup and game validation
 
-Shared targets and tool pins are in [harness.config.json](../harness.config.json) and [harness.lock.json](../harness.lock.json). Create ignored `harness.local.json` with actual absolute homes:
+For contributor setup, fixture deployment, and release checks, see [development](development.md#harness-setup-and-game-validation).
 
-```json
-{
-  "schemaVersion": 1,
-  "java": { "java21": "C:/absolute/path/to/jdk-21" },
-  "timeouts": { "build": 900000, "start": 240000, "test": 600000, "stop": 20000 },
-  "eulaAccepted": false
-}
-```
+## Forge and Fabric 1.20.1
 
-Set consent true only when the user has already accepted Minecraft's EULA. Java home is the installation root containing bin/java. Local `tools` may map lock keys to verified existing files; otherwise locked downloads are used.
+Forge 47.3.0 and Fabric Loader 0.16.14 / API 0.92.7+1.20.1 use Java 17 for the game. Optional viewers are JEI 15.20.0.106 and EMI 1.1.24+1.20.1+fabric. TechReborn and Mekanism adapters remain scoped to the pinned 1.21.1 packs. Use the [capture commands](#fixed-collectors) after installing the matching collector; [development setup](development.md#forge-and-fabric-1201-validation) covers building and testing these distributions.
 
-```console
-pnpm exec mch tools install mc-pilot --project . --json
-```
-
-Set local `backends.mc-pilot` to the returned backendRoot. The backend installer uses npm ci internally; keep npm on PATH or select `--npm-command`. It does not edit local configuration. See the installed package's docs/configuration.md and docs/tools.md for the full contract. Optional assetCaches can seed verified objects, not native binaries or personal worlds.
-
-```console
-pnpm exec mch targets --json
-pnpm exec mch doctor --json
-pnpm exec mch inspect --target neoforge-1.21.1 --json
-pnpm exec mch build --target neoforge-1.21.1 --json
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-offline --json
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-server --json
-pnpm exec mch test --target neoforge-1.21.1 --suite atlas-client --json
-pnpm exec mch test --all --profile release --json
-```
-
-Release includes NeoForge atlas-server/client/offline/world and Fabric atlas-fabric-server/client/offline. Missing client prerequisites cannot be replaced by server-only success. Runs preserve raw captures, snapshots, artifacts, diagnostics, diffs, and logs under `.harness/runs/<run-id>/`.
-
-`atlas-negative` is an intentional failure outside required release suites; run it explicitly and expect failed recipe/tag requirements. The normal server suite's failure-fixture case instead passes when it successfully detects the injected violation.
+Minecraft 1.20.1 serializers expose `fromJson`, `toNetwork` and `fromNetwork`, with no universal runtime JSON codec. Captures retain network base64/SHA-256 under each recipe's `serialization`; reviewed exact vanilla implementations additionally expose crafting, cooking, stonecutting and smithing-transform fields. Other implementations stay opaque with unsupported `recipeSerialization` coverage. Source JSON remains independent and cannot repair missing runtime semantics. NBT is retained with unknown matching/mutation behavior; JEI/EMI fluid units remain mB/droplets respectively; Forge 1.20.1 JEI fluid capture remains unverified at runtime. Forge global modifiers use a fixed 47.3.0 internal map boundary to retain applied IDs/order; arbitrary hooks remain unknown. Finite observation commands are implemented on both 1.20.1 loaders; dedicated and integrated game validation has completed for the reviewed implementation. The `observation/commands` coverage row describes registration of the four bounded commands; `observation/finite samples` remains partial, including when no sample has been requested.
 
 ## World observations
 
+The following observation commands are implemented on the configured 1.21.1 collectors and Forge/Fabric 1.20.1.
+
 ```text
-craftatlas observe loot probe atlas:probe 10
+craftatlas observe loot dungeon minecraft:chests/simple_dungeon 10
 craftatlas observe block stone minecraft:stone minecraft:diamond_pickaxe 5
 craftatlas observe entity zombie minecraft:zombie 10
 craftatlas observe world chunk 0 0 31
 craftatlas dump after-observations
 ```
 
-Block/entity sampling evaluates loot contexts rather than actual destruction/death events and does not give player items. World observation can generate chunks: radius is 0–1, height span at most 64, and loot trials 1–1000. Each observation stores context, trials, manifests, and completion under craftatlas/observations. Reload invalidates attachment to the prior generation. These finite samples do not prove absence, sustainable supply, or survival progression.
+Block/entity sampling evaluates loot contexts rather than actual destruction/death events and does not give player items. World observation can generate chunks: radius is 0–1, height span at most 64, and loot trials 1–1000. Each observation stores context, trials, manifests, and completion under craftatlas/observations. The command source supplies the position, dimension and optional player; console observations have no player. Tool arguments retain 1.20.1 NBT, for example `minecraft:diamond_pickaxe{Enchantments:[{id:"minecraft:silk_touch",lvl:1s}]}`. Missing table parameters and nonliving entity types fail explicitly. The collector refuses busy/reloading/stopped sessions, invalid labels and overwrites; failed observations do not attach to snapshots. Reload invalidates attachment to the prior generation. These finite samples do not prove absence, sustainable supply, or survival progression.
 
 ## Selected-route materials and costs
 
@@ -116,3 +92,7 @@ pnpm atlas serve --snapshot fixtures/definition-progression-snapshot.json --defi
 ```
 
 Cost requires a scenario and request selecting routes, output indexes, OR inputs, and target units/quantity. Review UI-generated choices; they are not optimal-route guarantees. Fictional progression/equipment fixtures test semantics only. See [contracts](contracts.md) for setup/recurring costs, catalysts/durability/returns, unknown totals, probability assumptions, and result completeness. Use [performance procedures](performance.md) for measurement.
+
+### Validate the 1.20.1 observation port
+
+Contributor checks are in [development](development.md#validate-the-1201-observation-port).

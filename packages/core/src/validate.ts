@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Ajv } from 'ajv';
 import type { Model, Snapshot } from './types.ts';
+import { bytesHash } from './hash.ts';
 import { validateDatapack } from './datapack.ts';
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validators = new Map<string, ReturnType<Ajv['compile']>>();
@@ -18,6 +19,11 @@ export function validateSnapshot(value: unknown): Snapshot {
   const s = validate<Snapshot>('snapshot', value);
   unique(s.recipes.map(r => r.id), 'recipe ID'); unique(s.resources.map(r => r.id), 'resource ID');
   validateDatapack(s.datapack);
+  for (const r of s.recipes) if (r.serialization) {
+    const raw = r.serialization;
+    if (raw.bytesBase64 === undefined) { if (!raw.error) throw new Error(`Missing recipe network bytes: ${r.id}`); }
+    else if (Buffer.from(raw.bytesBase64, 'base64').toString('base64') !== raw.bytesBase64 || bytesHash(Buffer.from(raw.bytesBase64, 'base64')) !== raw.sha256) throw new Error(`Recipe network checksum mismatch: ${r.id}`);
+  }
   if (s.completion.status === 'failed') throw new Error('Snapshot failed');
   if (s.viewer && (s.viewer.session !== s.session || s.viewer.generation !== s.generation)) throw new Error('Stale viewer generation/session');
   if (s.viewer) unique(s.viewer.recipes.map(r => r.id), 'viewer source ID');

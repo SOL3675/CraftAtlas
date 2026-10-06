@@ -1,0 +1,7 @@
+modLoader="lowcodefml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="atlasfixture"
+version="1.0.0"
+displayName="Atlas embedded-resource fixture"
