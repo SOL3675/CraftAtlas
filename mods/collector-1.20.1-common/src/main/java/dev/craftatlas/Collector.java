@@ -47,7 +47,7 @@ public final class Collector {
     }
     private static State state(MinecraftServer server) { synchronized (STATES) { return STATES.computeIfAbsent(server, s -> new State()); } }
     public static void started(MinecraftServer server) {
-        State s = state(server); s.identity = new RuntimeIdentity(server.getServerDirectory(), () -> platform.modOrigins()); synchronized(s) { s.reloading = false; s.status = "ready"; }
+        State s = state(server); s.identity = new RuntimeIdentity(server.getServerDirectory().toPath(), () -> platform.modOrigins()); synchronized(s) { s.reloading = false; s.status = "ready"; }
         LOG.info("CRAFTATLAS READY session={} generation={}", s.session, s.generation);
     }
     public static void reloading(MinecraftServer server) {
