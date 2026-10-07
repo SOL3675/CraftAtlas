@@ -958,6 +958,17 @@
             }
           ]
         },
+        "startupInputsHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "startupConfigurationHash": {
           "anyOf": [
             {
@@ -1007,6 +1018,7 @@
         "inputs",
         "loadedJars",
         "startupJarsHash",
+        "startupInputsHash",
         "startupConfigurationHash",
         "startupPropertiesHash",
         "jvmProperties",

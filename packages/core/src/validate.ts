@@ -27,6 +27,7 @@ export function validateSnapshot(value: unknown): Snapshot {
   if (s.runtimeIdentity && typeof s.runtimeIdentity === 'object' && !Array.isArray(s.runtimeIdentity) && s.runtimeIdentity.status === 'complete') {
     if (s.runtimeIdentity.session !== s.session || s.runtimeIdentity.generation !== s.generation) throw new Error('Stale runtime identity session/generation');
     if (s.runtimeIdentity.startupJarsHash !== hash(s.runtimeIdentity.loadedJars)) throw new Error('Loaded runtime JAR identity changed after startup');
+    if (s.runtimeIdentity.startupInputsHash !== hash(s.runtimeIdentity.inputs)) throw new Error('Runtime input inventory changed after startup');
     const inputs = s.runtimeIdentity.inputs as Record<string, string>;
     const configuration = Object.fromEntries(Object.entries(inputs).filter(([key]) => key === 'server.properties' || ['config/', 'defaultconfigs/', 'world/serverconfig/'].some(root => key.startsWith(root))));
     if (s.runtimeIdentity.startupConfigurationHash !== hash(configuration) || s.runtimeIdentity.startupPropertiesHash !== hash(s.runtimeIdentity.jvmProperties)) throw new Error('Runtime configuration/JVM identity changed after startup');

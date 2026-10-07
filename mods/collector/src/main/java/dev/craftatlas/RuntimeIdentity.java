@@ -14,6 +14,7 @@ public final class RuntimeIdentity {
     private JsonArray startupJars;
     private String launchNonce;
     private String startupConfigurationHash;
+    private String startupInputsHash;
     private String startupPropertiesHash;
     private final List<String> propertyKeys = new ArrayList<>();
     private final List<String> errors = new ArrayList<>();
@@ -32,6 +33,7 @@ public final class RuntimeIdentity {
             startupJars = jars();
             JsonObject startupInputs = new JsonObject();
             for (String name : ROOTS) inputs(this.root.resolve(name), startupInputs);
+            startupInputsHash = hash(startupInputs);
             startupConfigurationHash = configurationHash(startupInputs);
             startupPropertiesHash = hash(properties());
         } catch (Exception error) { errors.add(error.toString()); }
@@ -74,12 +76,14 @@ public final class RuntimeIdentity {
         try {
             for (String name : ROOTS) inputs(root.resolve(name), measured);
             loaded = jars();
+            if (!hash(measured).equals(startupInputsHash)) throw new IllegalStateException("Runtime input inventory changed after boot; fully restart with the intended config/datapack/script inputs before capture");
             if (startupJars == null || !hash(loaded).equals(hash(startupJars))) throw new IllegalStateException("Loaded JAR bytes changed after boot; restart the server before capture");
             if (!configurationHash(measured).equals(startupConfigurationHash) || !hash(properties).equals(startupPropertiesHash)) throw new IllegalStateException("Configuration or declared JVM properties changed after boot; fully restart before capture to verify applied inputs");
         } catch (Exception error) { failures.add(error.toString()); }
         return object("schemaVersion", 1, "status", failures.isEmpty() ? "complete" : "unsupported", "launchNonce", launchNonce,
             "requestId", requestId, "session", session, "generation", generation, "inputs", measured, "loadedJars", loaded,
             "startupJarsHash", startupJars == null ? null : hash(startupJars), "startupConfigurationHash", startupConfigurationHash,
+            "startupInputsHash", startupInputsHash,
             "startupPropertiesHash", startupPropertiesHash, "jvmProperties", properties, "errors", failures);
     }
 }

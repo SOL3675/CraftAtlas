@@ -38,5 +38,6 @@ public final class IdentityProbe {
         RuntimeIdentity properties = new RuntimeIdentity(root, () -> List.of(jar));
         System.setProperty("mod.option", "changed");
         System.out.println(canonical(properties.capture("property-after-boot", "fourth-session", 1)));
+        System.out.println(canonical(new RuntimeIdentity(root, () -> List.of(jar)).capture("fresh-generation", "fifth-session", 2)));
     }
 }
