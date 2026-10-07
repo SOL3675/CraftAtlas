@@ -18,7 +18,7 @@ public final class FabricJarOrigins {
         for (ModContainer mod : containers) {
             if (List.of("minecraft", "java", "fabricloader").contains(mod.getMetadata().getId())) continue;
             for (Path source : sources(mod, mods, new HashSet<>())) {
-                if (!source.toAbsolutePath().normalize().startsWith(root.toAbsolutePath().normalize().resolve("mods"))) throw new IllegalStateException("Unrecorded external Mod origin: " + mod.getMetadata().getId() + " kind=" + mod.getOrigin().getKind() + " source=" + source + " runtime=" + mod.getRootPaths());
+                if (!source.toAbsolutePath().normalize().startsWith(root.toAbsolutePath().normalize().resolve("mods")) && !loaderNestedSource(mod, mods, source, root)) throw new IllegalStateException("Unrecorded external Mod origin: " + mod.getMetadata().getId() + " kind=" + mod.getOrigin().getKind() + " source=" + source + " runtime=" + mod.getRootPaths());
                 paths.add(source);
             }
             for (Path runtime : mod.getRootPaths()) {
@@ -42,5 +42,18 @@ public final class FabricJarOrigins {
             }
             default -> throw new IllegalStateException("Unknown Mod origin; capture identity is unverifiable");
         };
+    }
+    /** Loader-bundled nested modules are measured with their loaded parent, never treated as unrecorded deployed Mods. */
+    private static boolean loaderNestedSource(ModContainer mod, Map<String, ModContainer> mods, Path source, Path root) {
+        Set<String> seen = new HashSet<>();
+        while (mod.getOrigin().getKind() == net.fabricmc.loader.api.metadata.ModOrigin.Kind.NESTED) {
+            if (!seen.add(mod.getMetadata().getId())) return false;
+            mod = mods.get(mod.getOrigin().getParentModId());
+            if (mod == null) return false;
+        }
+        if (!mod.getMetadata().getId().equals("fabricloader")) return false;
+        Path normalized = source.toAbsolutePath().normalize();
+        return normalized.startsWith(root.toAbsolutePath().normalize().resolve("libraries/net/fabricmc/fabric-loader"))
+            && mod.getOrigin().getPaths().stream().anyMatch(path -> path.toAbsolutePath().normalize().equals(normalized));
     }
 }
