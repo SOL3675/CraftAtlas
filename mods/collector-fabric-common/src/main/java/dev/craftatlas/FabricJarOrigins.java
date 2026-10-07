@@ -18,7 +18,7 @@ public final class FabricJarOrigins {
         for (ModContainer mod : containers) {
             if (List.of("minecraft", "java", "fabricloader").contains(mod.getMetadata().getId())) continue;
             for (Path source : sources(mod, mods, new HashSet<>())) {
-                if (!source.toAbsolutePath().normalize().startsWith(root.toAbsolutePath().normalize().resolve("mods"))) throw new IllegalStateException("Unrecorded external Mod origin: " + mod.getMetadata().getId());
+                if (!source.toAbsolutePath().normalize().startsWith(root.toAbsolutePath().normalize().resolve("mods"))) throw new IllegalStateException("Unrecorded external Mod origin: " + mod.getMetadata().getId() + " kind=" + mod.getOrigin().getKind() + " source=" + source + " runtime=" + mod.getRootPaths());
                 paths.add(source);
             }
             for (Path runtime : mod.getRootPaths()) {
