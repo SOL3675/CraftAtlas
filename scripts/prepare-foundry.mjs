@@ -58,7 +58,7 @@ function main() {
       run('git', ['-c', 'submodule.recurse=false', 'fetch', '--no-tags', '--depth=1', '--', source, pin.commit], checkout);
     } catch (error) {
       if (args.length) throw error;
-      throw new Error(`Cannot fetch the pinned Foundry commit from ${pin.repository}. Use existing Git read access or an authenticated --source checkout; CI setup is documented in docs/development.md. ${error.message}`);
+      throw new Error(`Cannot fetch the pinned Foundry commit from ${pin.repository}. Check network access and pinned commit availability, or use an existing --source checkout; setup is documented in docs/development.md. ${error.message}`);
     }
     run('git', ['-c', 'submodule.recurse=false', 'checkout', '--quiet', '--detach', pin.commit], checkout);
     if (run('git', ['rev-parse', 'HEAD'], checkout, true) !== pin.commit) throw new Error('Source identity mismatch');
