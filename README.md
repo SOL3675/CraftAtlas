@@ -60,3 +60,5 @@ Viewer display is not proof of execution. Forge 1.20.1 JEI fluid capture remains
 ## License
 
 Original CraftAtlas code and documentation are licensed under [MIT](LICENSE), copyright (c) 2026 SOL3675. Separate third-party licenses and copyright notices remain applicable: Gradle Wrapper scripts retain Apache-2.0 headers, and their JARs retain `META-INF/LICENSE`. Dependencies, downloaded Mods, and Minecraft retain their own licenses. Builds copy LICENSE into `dist/`; collector binary and source JARs include it as `META-INF/LICENSE`. The npm package is `private: true` and unpublished.
+
+For required current-build acquisition checks, use [fresh runtime capture identity](docs/usage.md#use-captures-in-a-required-current-build-check) with a compatible Foundry runtime. It preserves measured JAR/configuration provenance and rejects stale or unverifiable evidence; new target game validation remains required.

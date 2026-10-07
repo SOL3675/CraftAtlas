@@ -34,8 +34,9 @@ tasks.withType(JavaCompile).configureEach { options.release = 17; options.encodi
 tasks.withType(AbstractArchiveTask).configureEach { preserveFileTimestamps = false; reproducibleFileOrder = true }
 tasks.withType(Jar).configureEach { from('../../LICENSE') { into 'META-INF' } }
 tasks.register('copySharedSources', Copy) {
+    from('../collector-fabric-common/src/main/java')
     from('../collector-1.20.1-common/src/main/java')
-    from('../collector/src/main/java') { include 'dev/craftatlas/JsonFiles.java', 'dev/craftatlas/DatapackCollector.java' }
+    from('../collector/src/main/java') { include 'dev/craftatlas/JsonFiles.java', 'dev/craftatlas/RuntimeIdentity.java', 'dev/craftatlas/DatapackCollector.java' }
     into layout.buildDirectory.dir('shared/java')
 }
 sourceSets.main.java.srcDir(layout.buildDirectory.dir('shared/java'))

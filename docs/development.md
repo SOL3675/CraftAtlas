@@ -64,7 +64,7 @@ The explicit source must be a clean local Git checkout; results record its full 
 
 Contract CI runs `node scripts/prepare-foundry.mjs` to build the immutable source pin before the frozen install, check, test and build steps. Source acquisition failures fail the job rather than skipping consumer checks.
 
-For integration, use the four-target matrix in the README and the [1.20.1 prerequisites and commands below](#forge-and-fabric-1201-validation). Keep `mods/collector-1.20.1-common` isolated from the 1.21.1 Minecraft API sources; only `JsonFiles` and `DatapackCollector` are shared across versions. Read the target-specific serializer/network, pack API and viewer boundaries before expanding extraction. For integration, run doctor, inspect/build for each affected target, and its atlas-offline suite, followed by actual game suites when prerequisites are available. Doctor failures for absent Java/backend/display/EULA are environment blockers, not passes. Offline unit tests and successful TypeScript builds do not prove real Minecraft behavior.
+For integration, use the four-target matrix in the README and the [1.20.1 prerequisites and commands below](#forge-and-fabric-1201-validation). Keep `mods/collector-1.20.1-common` isolated from the 1.21.1 Minecraft API sources; only version-independent `JsonFiles`, `DatapackCollector` and `RuntimeIdentity` are shared across versions. Read the target-specific serializer/network, pack API and viewer boundaries before expanding extraction. For integration, run doctor, inspect/build for each affected target, and its atlas-offline suite, followed by actual game suites when prerequisites are available. Doctor failures for absent Java/backend/display/EULA are environment blockers, not passes. Offline unit tests and successful TypeScript builds do not prove real Minecraft behavior.
 
 Keep English procedural docs and a linked Japanese README. Retain necessary usage, constraints, licenses, and agent instructions; record changes/rationale in commits instead of separate design restatements, migration records, or phase histories. Pushes, PRs, merges, visibility changes, and publication are separate authorized operations.
 
@@ -186,3 +186,20 @@ The 1.20.1 client suites exercise player-issued normal/Silk Touch block, entity 
 ## Browser UI locales
 
 Add a message catalog in `packages/web/public/locales/<lowercase-language-tag>.js` and register its ID, native language name and import in `locale-catalogs.js`. Copy the keys and `{parameter}` names from `en.js`; English supplies missing translations. Use `data-i18n` (or `data-i18n-aria-label` / `data-i18n-placeholder`) for static UI and `msg` with `localize` for dynamic text so switching updates existing nodes. Keep captured names, identifiers and raw evidence unchanged. Run the locale tests and check loaded views in the browser, including graph controls, layout and accessible names.
+
+## Validate runtime capture identity
+
+Keep `craft-foundry.source.json` and `pnpm-lock.yaml` on their independent reachable bootstrap pin while developing the additive collector identity interface. Run `pnpm check`, `pnpm test`, `pnpm build`, then compile all four configured collector targets with their actual Java roles using the existing inspect/build procedures. Do not execute games in a cloud contract task.
+
+For a pure Java file-measurement probe after resolving Gson from the inspected classpath, run:
+
+```console
+node scripts/check-collector-identity.ts --gson <resolved-gson.jar> --release 17
+node scripts/check-collector-identity.ts --gson <resolved-gson.jar> --release 21
+```
+
+`--ecj <compiler.jar>` supports a separately verified compiler when javac is unavailable. This probe checks startup-measured loaded JAR bytes, missing launch identity, changed config/datapack inventories, nonce retention across file relabeling, unarmed legacy compatibility, declared JVM property changes, datapack-only fresh-generation capture, a newly constructed startup identity, changed/missing JARs and directory origins. It loads no Minecraft APIs. The existing canonical/hash probe remains required for Java/TypeScript checksummed evidence.
+
+For authorized local game validation, preserve original projects/pins/worlds and use separate checkouts at the exact candidate Foundry and Atlas commits. Bootstrap/install this checkout's original Foundry dependency first, then overlay the exact reviewed Foundry 0.1.8 tarball only in that disposable checkout, recording its SHA-256 and both original/overlay lock integrity. Keep the canonical source pin unchanged. Follow [coordinated candidate validation](https://github.com/SOL3675/CraftFoundry/blob/main/docs/survival.md#validate-coordinated-candidates-without-changing-original-pins): compile collector JARs for NeoForge/Fabric 1.21.1 and Forge/Fabric 1.20.1, declare them as exact runtime dependencies of the consuming Mod, and run Foundry's required fresh-capture process suite with a clean explicit Atlas candidate source override until its reviewed reachable gitlink is delivered. Preserve raw manifests/completion, expected/current identities and failures. Missing identity remains unsupported even when ordinary offline analysis is readable.
+
+The collector/schema extension has cloud contracts and Java 17/21 pure file probes. Its new actual Minecraft builds, loaded-origin handling and game runs have not been validated by those checks. Publish/review Atlas before updating Foundry's gitlink to a final reachable commit; avoid unpushed SHA locks and never repin this repository to its parent feature tip to bootstrap it.

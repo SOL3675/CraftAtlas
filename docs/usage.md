@@ -96,3 +96,7 @@ Cost requires a scenario and request selecting routes, output indexes, OR inputs
 ### Validate the 1.20.1 observation port
 
 Contributor checks are in [development](development.md#validate-the-1201-observation-port).
+
+## Use captures in a required current-build check
+
+Ordinary saved snapshots remain useful for offline analysis. To use acquisition analysis as a required Mod-development check, use [Foundry's fresh capture identity procedure](https://github.com/SOL3675/CraftFoundry/blob/main/docs/survival.md#fresh-capture-and-built-jar-identity). Its configured dedicated runtime loads this collector as a recorded dependency, issues a fresh launch nonce/request, and checks actual loaded JAR/config/datapack/JVM bytes and live session/generation against the current built artifacts. Old, missing or unverifiable identity cannot pass a required check. Preserve complete raw capture and companion evidence; an identity pass does not prove exhaustive acquisition or sustainable supply. This new identity path requires its own target build/game validation before claiming support.

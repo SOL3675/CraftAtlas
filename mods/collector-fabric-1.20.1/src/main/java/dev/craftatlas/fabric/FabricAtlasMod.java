@@ -19,6 +19,9 @@ public final class FabricAtlasMod implements ModInitializer {
             public String loaderVersion() { return FabricLoader.getInstance().getModContainer("fabricloader").orElseThrow().getMetadata().getVersion().getFriendlyString(); }
             public String collectorVersion() { return FabricLoader.getInstance().getModContainer("craftatlas").orElseThrow().getMetadata().getVersion().getFriendlyString(); }
             public String viewer() { return "emi"; }
+            public java.util.List<java.nio.file.Path> modOrigins() {
+                return dev.craftatlas.FabricJarOrigins.paths(FabricLoader.getInstance().getGameDir());
+            }
             public JsonArray mods() {
                 JsonArray mods = new JsonArray();
                 FabricLoader.getInstance().getAllMods().stream().sorted(Comparator.comparing(m -> m.getMetadata().getId())).forEach(m -> mods.add(JsonFiles.object("id", m.getMetadata().getId(), "version", m.getMetadata().getVersion().getFriendlyString())));
