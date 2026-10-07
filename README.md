@@ -16,7 +16,7 @@ pnpm atlas serve --snapshot fixtures/after.json --scenario fixtures/scenario.jso
 
 Open [the local UI](http://127.0.0.1:4317), search for `diamond`, and inspect quantities, AND / OR choices, equipment, evidence, and unknown conditions. Stop with Ctrl+C. Mod filters change the display; analysis restrictions come from the scenario. `--before` selects the old snapshot and `--snapshot` the new one for comparison.
 
-The first command obtains the pinned CraftFoundry dependency from its public repository over anonymous HTTPS. No custom token or Actions secret is required, including for fork PRs. If you already have its checkout, add `--source ../CraftFoundry`. See [setup and development](docs/development.md) for restoration, build, and testing instructions.
+The first command obtains the pinned CraftFoundry dependency. If you already have its checkout, add `--source ../CraftFoundry`. See [setup and development](docs/development.md) for restoration, build, and testing instructions.
 
 ## CLI and game captures
 
@@ -59,4 +59,4 @@ Viewer display is not proof of execution. Forge 1.20.1 JEI fluid capture remains
 
 ## License
 
-Original CraftAtlas code and documentation are licensed under [MIT](LICENSE), copyright (c) 2026 SOL3675. Separate third-party licenses and copyright notices remain applicable: Gradle Wrapper scripts retain Apache-2.0 headers, and their JARs retain `META-INF/LICENSE`. Dependencies, downloaded Mods, and Minecraft retain their own licenses. Builds copy LICENSE into `dist/`; collector binary and source JARs include it as `META-INF/LICENSE`. The npm package remains `private: true` and unpublished; the Git repository is public.
+Original CraftAtlas code and documentation are licensed under [MIT](LICENSE), copyright (c) 2026 SOL3675. Separate third-party licenses and copyright notices remain applicable: Gradle Wrapper scripts retain Apache-2.0 headers, and their JARs retain `META-INF/LICENSE`. Dependencies, downloaded Mods, and Minecraft retain their own licenses. Builds copy LICENSE into `dist/`; collector binary and source JARs include it as `META-INF/LICENSE`. The npm package is `private: true` and unpublished.

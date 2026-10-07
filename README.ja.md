@@ -16,7 +16,7 @@ pnpm atlas serve --snapshot fixtures/after.json --scenario fixtures/scenario.jso
 
 [ローカル UI](http://127.0.0.1:4317) を開き、`diamond` を検索してください。数量、AND / OR、設備、根拠、未知条件を確認できます。終了は Ctrl+C です。Mod フィルターは表示を変更し、分析の制限はシナリオから設定します。変更比較では `--before` に旧スナップショット、`--snapshot` に新スナップショットを指定します。
 
-最初のコマンドは公開リポジトリから匿名 HTTPS で固定した CraftFoundry 依存を取得します。fork PR を含め、独自トークンや Actions secret は不要です。既存のチェックアウトを使う場合は `--source ../CraftFoundry` を追加してください。復元・ビルド・テストの手順は [セットアップと開発](docs/development.md) を参照してください。
+最初のコマンドは固定した CraftFoundry 依存を取得します。既存のチェックアウトを使う場合は `--source ../CraftFoundry` を追加してください。復元・ビルド・テストの手順は [セットアップと開発](docs/development.md) を参照してください。
 
 ## CLI と実ゲームの収集
 
@@ -59,4 +59,4 @@ Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力
 
 ## ライセンス
 
-CraftAtlas 独自のコードとドキュメントには [MIT](LICENSE) を適用します（Copyright (c) 2026 SOL3675）。第三者のライセンスと著作権表示は維持します。Gradle Wrapper スクリプトの Apache-2.0 ヘッダーと JAR 内の `META-INF/LICENSE` は変更しません。依存ライブラリ、取得する Mod、Minecraft はそれぞれのライセンスに従います。ビルド時に LICENSE を `dist/` へコピーし、collector のバイナリ・ソース JAR には `META-INF/LICENSE` として同梱します。npm パッケージは引き続き未公開・`private: true` ですが、Git リポジトリは公開されています。
+CraftAtlas 独自のコードとドキュメントには [MIT](LICENSE) を適用します（Copyright (c) 2026 SOL3675）。第三者のライセンスと著作権表示は維持します。Gradle Wrapper スクリプトの Apache-2.0 ヘッダーと JAR 内の `META-INF/LICENSE` は変更しません。依存ライブラリ、取得する Mod、Minecraft はそれぞれのライセンスに従います。ビルド時に LICENSE を `dist/` へコピーし、collector のバイナリ・ソース JAR には `META-INF/LICENSE` として同梱します。npm パッケージは未公開・`private: true` です。
