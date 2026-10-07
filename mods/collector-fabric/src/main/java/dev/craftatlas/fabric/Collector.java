@@ -22,11 +22,15 @@ import java.util.*;
 import java.util.concurrent.*;
 import static dev.craftatlas.JsonFiles.*;
 
+import dev.craftatlas.RuntimeIdentity;
+import dev.craftatlas.FabricJarOrigins;
+
 public final class Collector {
     private static final Logger LOG = LoggerFactory.getLogger("CraftAtlas");
     private static final Map<MinecraftServer, State> STATES = new WeakHashMap<>();
     private static final ExecutorService WRITER = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "CraftAtlas writer"); t.setDaemon(true); return t; });
     private static final class State {
+        RuntimeIdentity identity;
         final String session = UUID.randomUUID().toString();
         long generation = 1;
         boolean active = true, busy = false, reloading = false;
@@ -35,7 +39,7 @@ public final class Collector {
     }
     private static State state(MinecraftServer server) { synchronized (STATES) { return STATES.computeIfAbsent(server, s -> new State()); } }
     public static void started(MinecraftServer server) {
-        State s = state(server); synchronized(s) { s.reloading = false; s.status = "ready"; }
+        State s = state(server); s.identity = new RuntimeIdentity(server.getServerDirectory(), () -> FabricJarOrigins.paths(server.getServerDirectory())); synchronized(s) { s.reloading = false; s.status = "ready"; }
         LOG.info("CRAFTATLAS READY session={} generation={}", s.session, s.generation);
     }
     public static void reloading(MinecraftServer server) {
@@ -71,7 +75,7 @@ public final class Collector {
         }
         long begin = System.nanoTime(), memory = usedMemory();
         try {
-            JsonObject snapshot = capture(server, s.session, generation, viewer);
+            JsonObject snapshot = capture(server, s.session, generation, viewer, label);
             long captureNanos = System.nanoTime() - begin, captureMemory = usedMemory() - memory;
             Path root = System.getProperty("craftatlas.output") == null ? server.getServerDirectory().resolve("craftatlas") : Path.of(System.getProperty("craftatlas.output"));
             Path target = root.resolve(label).toAbsolutePath();
@@ -147,7 +151,7 @@ public final class Collector {
         } catch (Exception error) { synchronized(s) { s.busy = false; s.status = "failed"; } source.sendFailure(Component.literal(error.toString())); LOG.error("CRAFTATLAS OBSERVATION FAILED label={}", label, error); return 0; }
     }
     private static long usedMemory() { Runtime r = Runtime.getRuntime(); return r.totalMemory() - r.freeMemory(); }
-    private static JsonObject capture(MinecraftServer server, String session, long generation, JsonObject viewer) throws Exception {
+    private static JsonObject capture(MinecraftServer server, String session, long generation, JsonObject viewer, String requestId) throws Exception {
         JsonArray resources = new JsonArray(); JsonObject tags = new JsonObject();
         registry(BuiltInRegistries.ITEM, "item", "", resources, tags);
         registry(BuiltInRegistries.FLUID, "fluid", "fluid:", resources, tags);
@@ -201,6 +205,7 @@ public final class Collector {
         snapshot.add("world", world);
         if (datapack != null) snapshot.add("datapack", datapack);
         if (viewer != null) snapshot.add("viewer", viewer);
+        if (state(server).identity != null && state(server).identity.isArmed()) snapshot.add("runtimeIdentity", state(server).identity.capture(requestId, session, generation));
         snapshot.addProperty("id", hash(object("resources", resources, "tags", tags, "recipes", recipes, "environment", environment, "mods", mods,
             "world", world, "viewer", viewer, "datapack", datapack)).substring(0, 24));
         return snapshot;

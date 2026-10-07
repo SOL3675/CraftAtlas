@@ -37,6 +37,7 @@ export interface ViewerRecipe {
   equipment: string[]; execution: 'display' | 'unconfirmed'; unknown: string[]; raw: Json;
 }
 export interface Snapshot {
+  runtimeIdentity?: Json;
   schemaVersion: 1; id: string; session: string; generation: number; mode: 'dedicated' | 'integrated';
   minecraft: string; loader: string; loaderVersion: string; collectorVersion: string;
   mods: { id: string; version: string }[]; environment: Json; resources: Resource[]; tags: Record<string, string[]>;
@@ -45,7 +46,7 @@ export interface Snapshot {
   world?: WorldData;
   datapack?: DatapackData;
 }
-export interface Model { schemaVersion: 1; snapshotId: string; session: string; generation: number; normalizerVersion: string; environment: Json; mods: Snapshot['mods']; resources: Resource[]; tags: Record<string, string[]>; processes: Process[]; evidence: Evidence[]; coverage: Coverage[]; diagnostics: Diagnostic[]; contentHash: string; datapack?: DatapackData }
+export interface Model { runtimeIdentity?: Json; schemaVersion: 1; snapshotId: string; session: string; generation: number; normalizerVersion: string; environment: Json; mods: Snapshot['mods']; resources: Resource[]; tags: Record<string, string[]>; processes: Process[]; evidence: Evidence[]; coverage: Coverage[]; diagnostics: Diagnostic[]; contentHash: string; datapack?: DatapackData }
 export interface Diagnostic { id: string; rule: string; target: string; severity: 'info' | 'warning' | 'error'; status: 'confirmed' | 'unknown'; scenario: string | null; message: string; evidence: string[]; path: string[]; unknown: string[]; snapshotId: string }
 export interface Scenario {
   schemaVersion: 1; id: string; inventory: Record<string, number>; equipment: string[]; stages: string[];

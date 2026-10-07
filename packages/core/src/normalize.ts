@@ -28,6 +28,7 @@ function alternatives(value: any, tags: Record<string, string[]>): Alternative[]
 export function normalize(snapshot: Snapshot): Model {
   const s = validateSnapshot(snapshot);
   const m: Model = { schemaVersion: 1, snapshotId: s.id, session: s.session, generation: s.generation, normalizerVersion: NORMALIZER_VERSION, environment: s.environment, mods: s.mods, resources: structuredClone(s.resources), tags: structuredClone(s.tags), processes: [], evidence: [], coverage: structuredClone(s.coverage), diagnostics: [], contentHash: '' };
+  if (s.runtimeIdentity) m.runtimeIdentity = structuredClone(s.runtimeIdentity);
   if (s.datapack) m.datapack = structuredClone(s.datapack);
   const { recipes, sources, dataOnly } = capturedRecipes(s);
   const customResources = (s.datapack?.resources ?? []).filter(r => !datapackRecipeId(r, s.minecraft));
@@ -128,7 +129,7 @@ export function normalize(snapshot: Snapshot): Model {
   m.contentHash = semanticHash(m); return validateModel(m);
 }
 export function semanticHash(m: Model): string {
-  return hash({ version: m.normalizerVersion, ...(m.datapack ? { datapack: m.datapack } : {}), environment: m.environment, mods: [...m.mods].sort((a, b) => a.id.localeCompare(b.id)), resources: [...m.resources].sort((a, b) => a.id.localeCompare(b.id)).map(({ evidence, ...r }) => r), tags: Object.fromEntries(Object.entries(m.tags).sort().map(([k, v]) => [k, [...v].sort()])), processes: [...m.processes].sort((a, b) => a.id.localeCompare(b.id)).map(processMeaning), coverage: [...m.coverage].sort((a, b) => (a.dataset + a.type).localeCompare(b.dataset + b.type)) });
+  return hash({ version: m.normalizerVersion, ...(m.runtimeIdentity ? { runtimeInputs: runtimeMeaning(m.runtimeIdentity) } : {}), ...(m.datapack ? { datapack: m.datapack } : {}), environment: m.environment, mods: [...m.mods].sort((a, b) => a.id.localeCompare(b.id)), resources: [...m.resources].sort((a, b) => a.id.localeCompare(b.id)).map(({ evidence, ...r }) => r), tags: Object.fromEntries(Object.entries(m.tags).sort().map(([k, v]) => [k, [...v].sort()])), processes: [...m.processes].sort((a, b) => a.id.localeCompare(b.id)).map(processMeaning), coverage: [...m.coverage].sort((a, b) => (a.dataset + a.type).localeCompare(b.dataset + b.type)) });
 }
 function mergeViewer(m: Model, s: Snapshot) {
   const viewer = s.viewer!;
@@ -158,3 +159,6 @@ function mergeViewer(m: Model, s: Snapshot) {
   }
   m.coverage.push(...viewer.coverage);
 }
+
+/** Boot/request freshness belongs to provenance, while actual runtime bytes affect semantic identity. */
+function runtimeMeaning(identity: any) { return { schemaVersion: identity.schemaVersion, status: identity.status, inputs: identity.inputs, loadedJars: identity.loadedJars, jvmProperties: identity.jvmProperties }; }

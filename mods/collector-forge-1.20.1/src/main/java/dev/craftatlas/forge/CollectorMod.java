@@ -32,6 +32,9 @@ public final class CollectorMod {
             public String loaderVersion() { return ForgeVersion.getVersion(); }
             public String collectorVersion() { return ModList.get().getModContainerById("craftatlas").orElseThrow().getModInfo().getVersion().toString(); }
             public String viewer() { return "jei"; }
+            public java.util.List<java.nio.file.Path> modOrigins() {
+                return ModList.get().getMods().stream().filter(m -> !java.util.List.of("minecraft", "forge").contains(m.getModId())).map(m -> m.getOwningFile().getFile().getFilePath()).toList();
+            }
             public JsonArray mods() {
                 JsonArray mods = new JsonArray();
                 ModList.get().getMods().stream().sorted(Comparator.comparing(m -> m.getModId())).forEach(m -> mods.add(object("id", m.getModId(), "version", m.getVersion().toString())));

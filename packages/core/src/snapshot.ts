@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { bytesHash, hash } from './hash.ts';
 import { validateSnapshot } from './validate.ts';
 import type { Snapshot } from './types.ts';
+export const captureIdentityContractVersion = 1;
 export function readSnapshot(path: string): Snapshot {
   if (!existsSync(resolve(path, 'manifest.json'))) return validateSnapshot(JSON.parse(readFileSync(path, 'utf8')));
   const root = realpathSync(path);
