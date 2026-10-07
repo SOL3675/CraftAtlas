@@ -60,5 +60,3 @@ Mod 独自の取得方法は、バージョン限定の DefinitionPack で入力
 ## ライセンス
 
 CraftAtlas 独自のコードとドキュメントには [MIT](LICENSE) を適用します（Copyright (c) 2026 SOL3675）。第三者のライセンスと著作権表示は維持します。Gradle Wrapper スクリプトの Apache-2.0 ヘッダーと JAR 内の `META-INF/LICENSE` は変更しません。依存ライブラリ、取得する Mod、Minecraft はそれぞれのライセンスに従います。ビルド時に LICENSE を `dist/` へコピーし、collector のバイナリ・ソース JAR には `META-INF/LICENSE` として同梱します。npm パッケージは未公開・`private: true` です。
-
-必須の取得分析テストでは、[現在のビルドとランタイムの識別](docs/usage.md#use-captures-in-a-required-current-build-check)を使用します。古いキャプチャや検証不能な証拠では合格にしません。対応する4対象の専用サーバーでビルドと検証を実施しています。Modを更新するたびに、新しいキャプチャで現在のビルドを検証してください。
